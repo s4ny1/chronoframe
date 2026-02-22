@@ -902,7 +902,7 @@
             "description": "AWS S3、Cloudflare R2、またはその他の S3 互換サービスを使用します。"
           },
           "openlist": {
-            "label": "OpenList",
+            "label": "AList",
             "description": "Alist または OpenList インスタンスに接続して保存します。"
           }
         }
@@ -961,16 +961,16 @@
       },
       "openlist": {
         "baseUrl": {
-          "label": "OpenList ベース URL",
-          "description": "OpenList サーバーのベース URL"
+          "label": "AList ??? URL",
+          "description": "AList ???????? URL"
         },
         "rootPath": {
           "label": "ルートパス",
-          "description": "OpenList で写真を保存するルートパス"
+          "description": "AList ?????????????"
         },
         "token": {
           "label": "認証トークン",
-          "description": "OpenList API の認証トークン"
+          "description": "AList API ???????"
         },
         "uploadEndpoint": {
           "label": "アップロードエンドポイント",
@@ -999,16 +999,40 @@
         "cdnUrl": {
           "label": "CDN URL",
           "description": "画像にアクセスするためのカスタム CDN URL"
+        },
+        "username": {
+          "label": "?????",
+          "description": "????????????? AList ?????????"
+        },
+        "password": {
+          "label": "?????",
+          "description": "????????????? AList ?????????"
+        },
+        "otpCode": {
+          "label": "OTP ???",
+          "description": "2??????????????????"
+        },
+        "loginEndpoint": {
+          "label": "???????????",
+          "description": "AList ???? API ??????????: /api/auth/login?"
         }
       }
     }
   },
   "wizard": {
     "admin": {
-      "username": { "label": "ユーザー名" },
-      "email": { "label": "メールアドレス" },
-      "password": { "label": "パスワード" },
-      "confirmPassword": { "label": "パスワード（確認）" }
+      "username": {
+        "label": "ユーザー名"
+      },
+      "email": {
+        "label": "メールアドレス"
+      },
+      "password": {
+        "label": "パスワード"
+      },
+      "confirmPassword": {
+        "label": "パスワード（確認）"
+      }
     },
     "map": {
       "provider": {

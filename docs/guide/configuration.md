@@ -18,7 +18,7 @@ Whether using Docker or Docker Compose (.env) deployment, configuration is done 
 | NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN          | Mapbox access token (URL restricted), for map services          | None                                  | Required when `NUXT_PUBLIC_MAP_PROVIDER` is `mapbox` |
 | NUXT_NOMINATIM_BASE_URL                  | Nominatim base URL for reverse geocoding service                | `https://nominatim.openstreetmap.org` | No                                                   |
 | NUXT_MAPBOX_ACCESS_TOKEN                 | Mapbox access token (no URL restriction), for location services | None                                  | No                                                   |
-| NUXT_STORAGE_PROVIDER                    | Storage provider, supports `local`, `s3`, `openlist`            | `local`                               | Yes                                                  |
+| NUXT_STORAGE_PROVIDER                    | Storage provider, supports `local`, `s3`, `alist`            | `local`                               | Yes                                                  |
 | NUXT_PROVIDER_LOCAL_PATH                 | Local storage path                                              | `/app/data/storage`                   | No                                                   |
 | NUXT_PROVIDER_LOCAL_BASE_URL             | Local storage access URL                                        | `/storage`                            | No                                                   |
 | NUXT_PROVIDER_S3_ENDPOINT                | S3 compatible storage service endpoint                          | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `s3`        |
@@ -28,16 +28,20 @@ Whether using Docker or Docker Compose (.env) deployment, configuration is done 
 | NUXT_PROVIDER_S3_SECRET_ACCESS_KEY       | S3 secret access key                                            | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `s3`        |
 | NUXT_PROVIDER_S3_PREFIX                  | S3 storage prefix                                               | `photos/`                             | No                                                   |
 | NUXT_PROVIDER_S3_CDN_URL                 | S3 storage CDN URL                                              | None                                  | No                                                   |
-| NUXT_PROVIDER_OPENLIST_BASE_URL          | OpenList server URL                                             | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `openlist`  |
-| NUXT_PROVIDER_OPENLIST_ROOT_PATH         | OpenList root path                                              | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `openlist`  |
-| NUXT_PROVIDER_OPENLIST_TOKEN             | OpenList API token                                              | None                                  | Recommended (for OpenList authentication)            |
-| NUXT_PROVIDER_OPENLIST_ENDPOINT_UPLOAD   | OpenList upload endpoint                                        | `/api/fs/put`                         | No                                                   |
-| NUXT_PROVIDER_OPENLIST_ENDPOINT_DOWNLOAD | OpenList download endpoint                                      | None                                  | No                                                   |
-| NUXT_PROVIDER_OPENLIST_ENDPOINT_LIST     | OpenList list endpoint                                          | None                                  | No                                                   |
-| NUXT_PROVIDER_OPENLIST_ENDPOINT_DELETE   | OpenList delete endpoint                                        | `/api/fs/remove`                      | No                                                   |
-| NUXT_PROVIDER_OPENLIST_ENDPOINT_META     | OpenList metadata endpoint                                      | `/api/fs/get`                         | No                                                   |
-| NUXT_PROVIDER_OPENLIST_PATH_FIELD        | OpenList path field name                                        | `path`                                | No                                                   |
-| NUXT_PROVIDER_OPENLIST_CDN_URL           | OpenList CDN URL                                                | None                                  | No                                                   |
+| NUXT_PROVIDER_ALIST_BASE_URL          | AList server URL                                             | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `alist`  |
+| NUXT_PROVIDER_ALIST_ROOT_PATH         | AList root path                                              | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `alist`  |
+| NUXT_PROVIDER_ALIST_TOKEN             | AList API token                                              | None                                  | Recommended                                       |
+| NUXT_PROVIDER_ALIST_USERNAME          | AList login username                                         | None                                  | Optional (used when token is not set)             |
+| NUXT_PROVIDER_ALIST_PASSWORD          | AList login password                                         | None                                  | Optional (used when token is not set)             |
+| NUXT_PROVIDER_ALIST_OTP_CODE          | AList OTP code                                               | None                                  | Optional                                          |
+| NUXT_PROVIDER_ALIST_ENDPOINT_LOGIN    | AList login endpoint                                         | `/api/auth/login`                     | No                                                |
+| NUXT_PROVIDER_ALIST_ENDPOINT_UPLOAD   | AList upload endpoint                                        | `/api/fs/put`                         | No                                                   |
+| NUXT_PROVIDER_ALIST_ENDPOINT_DOWNLOAD | AList download endpoint                                      | None                                  | No                                                   |
+| NUXT_PROVIDER_ALIST_ENDPOINT_LIST     | AList list endpoint                                          | `/api/fs/list`                        | No                                                   |
+| NUXT_PROVIDER_ALIST_ENDPOINT_DELETE   | AList delete endpoint                                        | `/api/fs/remove`                      | No                                                   |
+| NUXT_PROVIDER_ALIST_ENDPOINT_META     | AList metadata endpoint                                      | `/api/fs/get`                         | No                                                   |
+| NUXT_PROVIDER_ALIST_PATH_FIELD        | AList path field name                                        | `path`                                | No                                                   |
+| NUXT_PROVIDER_ALIST_CDN_URL           | AList CDN URL                                                | None                                  | No                                                   |
 | NUXT_PUBLIC_OAUTH_GITHUB_ENABLED         | Enable GitHub OAuth login                                       | `false`                               | No                                                   |
 | NUXT_OAUTH_GITHUB_CLIENT_ID              | GitHub OAuth app Client ID                                      | None                                  | No (optional, for GitHub login)                      |
 | NUXT_OAUTH_GITHUB_CLIENT_SECRET          | GitHub OAuth app Client Secret                                  | None                                  | No (optional, for GitHub login)                      |

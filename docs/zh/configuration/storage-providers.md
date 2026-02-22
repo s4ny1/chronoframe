@@ -6,7 +6,7 @@ ChronoFrame 支持多种存储后端来保存您的照片和缩略图。本文�
 | --------------------------------- | :--: | ------------------ | ------------ |
 | [**S3 兼容存储**](#s3-兼容存储)   |  ✅  | 生产环境，云存储   | 按使用量计费 |
 | [**本地文件系统**](#本地文件系统) |  ✅  | 测试环境，离线部署 | 免费         |
-| [**OpenList**](#openlist-存储)    |  ✅  | 个人云存储，NAS    | 免费         |
+| [**AList**](#alist-存储)    |  ✅  | 个人云存储，NAS    | 免费         |
 
 ## S3 兼容存储
 
@@ -124,62 +124,74 @@ NUXT_PROVIDER_LOCAL_PATH=/app/data/storage
 NUXT_PROVIDER_LOCAL_BASE_URL=/storage
 ```
 
-## OpenList 存储
+## AList 存储
 
-OpenList 是一个开源的文件管理系统，提供对各种云存储服务的 API 访问。此提供程序允许您使用与 OpenList 兼容的服务作为照片存储后端。
+AList 是一个开源的文件管理系统，提供对各种云存储服务的 API 访问。此提供程序允许您使用与 AList 兼容的服务作为照片存储后端。
 
 | 环境变量 | 类型 | 必需 | 默认值 | 描述 |
 |---|---|---|---|---|
-| `NUXT_PROVIDER_OPENLIST_BASE_URL` | string | 是 | - | OpenList 服务的基础 URL |
-| `NUXT_PROVIDER_OPENLIST_ROOT_PATH` | string | 是 | - | 根存储路径 |
-| `NUXT_PROVIDER_OPENLIST_TOKEN` | string | 必需 | - | 认证令牌（认证时必需） |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_UPLOAD` | string | 可选 | `/api/fs/put` | 上传端点 |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_DOWNLOAD` | string | 可选 | - | 下载端点 |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_LIST` | string | 可选 | - | 列表端点 |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_DELETE` | string | 可选 | `/api/fs/remove` | 删除端点 |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_META` | string | 可选 | `/api/fs/get` | 元数据端点 |
-| `NUXT_PROVIDER_OPENLIST_PATH_FIELD` | string | 可选 | `path` | 路径字段名 |
-| `NUXT_PROVIDER_OPENLIST_CDN_URL` | string | 可选 | - | CDN URL |
+| `NUXT_PROVIDER_ALIST_BASE_URL` | string | 是 | - | AList 服务的基础 URL |
+| `NUXT_PROVIDER_ALIST_ROOT_PATH` | string | 是 | - | 根存储路径 |
+| `NUXT_PROVIDER_ALIST_TOKEN` | string | 可选 | - | API 令牌（推荐） |
+| `NUXT_PROVIDER_ALIST_USERNAME` | string | 可选 | - | 登录用户名（未配置 token 时使用） |
+| `NUXT_PROVIDER_ALIST_PASSWORD` | string | 可选 | - | 登录密码（未配置 token 时使用） |
+| `NUXT_PROVIDER_ALIST_OTP_CODE` | string | 可选 | - | 双因素登录 OTP 验证码 |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_LOGIN` | string | 可选 | `/api/auth/login` | 登录端点 |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_UPLOAD` | string | 可选 | `/api/fs/put` | 上传端点 |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_DOWNLOAD` | string | 可选 | - | 下载端点 |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_LIST` | string | 可选 | `/api/fs/list` | 列表端点 |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_DELETE` | string | 可选 | `/api/fs/remove` | 删除端点 |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_META` | string | 可选 | `/api/fs/get` | 元数据端点 |
+| `NUXT_PROVIDER_ALIST_PATH_FIELD` | string | 可选 | `path` | 路径字段名 |
+| `NUXT_PROVIDER_ALIST_CDN_URL` | string | 可选 | - | CDN URL |
 
 **认证：**
 
-OpenList 提供程序需要令牌认证以确保安全访问：
+AList 支持两种认证方式：token 认证或账号登录认证。
 
 ```bash
-NUXT_PROVIDER_OPENLIST_TOKEN=your-static-token
+# 推荐：Token 认证
+NUXT_PROVIDER_ALIST_TOKEN=your-static-token
+
+# 或：账号密码认证
+NUXT_PROVIDER_ALIST_USERNAME=admin
+NUXT_PROVIDER_ALIST_PASSWORD=your-password
+NUXT_PROVIDER_ALIST_OTP_CODE=
 ```
 
 ### 基础配置
 
 ```bash
-# 设置存储提供器为 OpenList
-NUXT_STORAGE_PROVIDER=openlist
+# 设置存储提供器为 AList
+NUXT_STORAGE_PROVIDER=alist
 
-# OpenList 基础配置
-NUXT_PROVIDER_OPENLIST_BASE_URL=https://your-openlist-server.com
-NUXT_PROVIDER_OPENLIST_ROOT_PATH=/chronoframe/photos
+# AList 基础配置
+NUXT_PROVIDER_ALIST_BASE_URL=https://your-alist-server.com
+NUXT_PROVIDER_ALIST_ROOT_PATH=/chronoframe/photos
 
-# 认证配置 - Token 认证
-NUXT_PROVIDER_OPENLIST_TOKEN=your-api-token
+# 认证配置 - token（推荐）或账号密码
+NUXT_PROVIDER_ALIST_TOKEN=your-api-token
+# NUXT_PROVIDER_ALIST_USERNAME=admin
+# NUXT_PROVIDER_ALIST_PASSWORD=your-password
 
 # 可选配置
-NUXT_PROVIDER_OPENLIST_ENDPOINT_UPLOAD=/api/fs/put
-NUXT_PROVIDER_OPENLIST_ENDPOINT_DOWNLOAD=
-NUXT_PROVIDER_OPENLIST_ENDPOINT_LIST=
-NUXT_PROVIDER_OPENLIST_ENDPOINT_DELETE=/api/fs/remove
-NUXT_PROVIDER_OPENLIST_ENDPOINT_META=/api/fs/get
-NUXT_PROVIDER_OPENLIST_PATH_FIELD=path
-NUXT_PROVIDER_OPENLIST_CDN_URL=
+NUXT_PROVIDER_ALIST_ENDPOINT_UPLOAD=/api/fs/put
+NUXT_PROVIDER_ALIST_ENDPOINT_DOWNLOAD=
+NUXT_PROVIDER_ALIST_ENDPOINT_LIST=/api/fs/list
+NUXT_PROVIDER_ALIST_ENDPOINT_DELETE=/api/fs/remove
+NUXT_PROVIDER_ALIST_ENDPOINT_META=/api/fs/get
+NUXT_PROVIDER_ALIST_PATH_FIELD=path
+NUXT_PROVIDER_ALIST_CDN_URL=
 ```
 
 ### 配置示例
-#### OpenList（理论上Alist也可行）
+#### AList（理论上Alist也可行）
 
 ```bash
-NUXT_STORAGE_PROVIDER=openlist
-NUXT_PROVIDER_OPENLIST_BASE_URL=https://openlist.example.com
-NUXT_PROVIDER_OPENLIST_ROOT_PATH=/115pan/chronoframe
-NUXT_PROVIDER_OPENLIST_TOKEN=your-static-token
+NUXT_STORAGE_PROVIDER=alist
+NUXT_PROVIDER_ALIST_BASE_URL=https://alist.example.com
+NUXT_PROVIDER_ALIST_ROOT_PATH=/115pan/chronoframe
+NUXT_PROVIDER_ALIST_TOKEN=your-static-token
 ```
 
 ## 常见问题

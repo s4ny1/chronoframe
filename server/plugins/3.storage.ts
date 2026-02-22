@@ -43,10 +43,19 @@ export default nitroPlugin(async (nitroApp) => {
 
   const storageConfiguration = activeProvider.config
 
-  const storageManager = new StorageManager(
-    storageConfiguration,
-    logger.storage,
-  )
+  let storageManager: StorageManager
+  try {
+    storageManager = new StorageManager(
+      storageConfiguration,
+      logger.storage,
+    )
+  } catch (err) {
+    logger.storage.error(
+      'Failed to initialize storage provider. Please check your storage configuration.',
+      err,
+    )
+    return
+  }
 
   // 设置全局实例
   setGlobalStorageManager(storageManager)

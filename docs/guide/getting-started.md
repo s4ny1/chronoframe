@@ -64,7 +64,7 @@ NUXT_PUBLIC_MAP_MAPLIBRE_TOKEN=
 # Mapbox access token for Mapbox
 NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
 
-# Storage provider (local or s3 or openlist)
+# Storage provider (local or s3 or alist)
 NUXT_STORAGE_PROVIDER=local
 NUXT_PROVIDER_LOCAL_PATH=/app/data/storage
 
@@ -85,13 +85,13 @@ NUXT_PROVIDER_S3_PREFIX=photos/
 NUXT_PROVIDER_S3_CDN_URL=
 ```
 
-If you want to use openlist instead of local storage, replace the storage section with:
+If you want to use alist instead of local storage, replace the storage section with:
 
 ```bash
-NUXT_STORAGE_PROVIDER=openlist
-NUXT_PROVIDER_OPENLIST_BASE_URL=https://openlist.example.com
-NUXT_PROVIDER_OPENLIST_ROOT_PATH=/115pan/chronoframe
-NUXT_PROVIDER_OPENLIST_TOKEN=your-static-token
+NUXT_STORAGE_PROVIDER=alist
+NUXT_PROVIDER_ALIST_BASE_URL=https://alist.example.com
+NUXT_PROVIDER_ALIST_ROOT_PATH=/115pan/chronoframe
+NUXT_PROVIDER_ALIST_TOKEN=your-static-token
 ```
 
 Optional GitHub OAuth variables:

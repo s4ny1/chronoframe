@@ -86,7 +86,7 @@ NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
 # Mapbox unrestricted token (optional, reverse geocoding)
 NUXT_MAPBOX_ACCESS_TOKEN=
 
-# Storage provider (local, s3 or openlist)
+# Storage provider (local, s3 or alist)
 NUXT_STORAGE_PROVIDER=local
 NUXT_PROVIDER_LOCAL_PATH=/app/data/storage
 

@@ -50,12 +50,18 @@ const convertToStorageObject = (s3object: _Object): StorageObject => {
 export class S3StorageProvider implements StorageProvider {
   config: S3StorageConfig
   private logger?: Logger['storage']
-  private client: S3Client
+  private _client: S3Client | null = null
 
   constructor(config: S3StorageConfig, logger?: Logger['storage']) {
     this.config = config
     this.logger = logger
-    this.client = createClient(config)
+  }
+
+  private get client(): S3Client {
+    if (!this._client) {
+      this._client = createClient(this.config)
+    }
+    return this._client
   }
 
   async create(

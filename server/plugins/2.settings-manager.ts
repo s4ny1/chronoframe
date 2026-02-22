@@ -77,9 +77,14 @@ async function migrateRuntimeConfigToSettings() {
     if (config.STORAGE_PROVIDER || config.provider) {
       _logger.info('Migrating storage configuration')
       
-      const storageProvider = config.STORAGE_PROVIDER || 's3'
-      const providerConfig = config.provider?.[storageProvider as keyof typeof config.provider]
-      
+      const rawStorageProvider = config.STORAGE_PROVIDER || 's3'
+      const storageProvider =
+        rawStorageProvider === 'openlist' ? 'alist' : rawStorageProvider
+
+      const providerConfig =
+        config.provider?.[storageProvider as keyof typeof config.provider]
+        || config.provider?.openlist
+
       if (providerConfig) {
         try {
           // Check if a provider of the same type already exists
@@ -98,7 +103,7 @@ async function migrateRuntimeConfigToSettings() {
             
             const providerId = await settingsManager.storage.addProvider({
               name: providerName,
-              provider: storageProvider as 's3' | 'local' | 'openlist',
+              provider: storageProvider as 's3' | 'local' | 'alist' | 'openlist',
               config: normalizeProviderConfig(storageProvider, providerConfig),
             })
             
@@ -149,17 +154,22 @@ function normalizeProviderConfig(
         prefix: config.prefix || 'photos/',
       }
     
+    case 'alist':
     case 'openlist': {
-      // Support both old nested and new flat endpoint formats
+      // Support both old nested and new flat endpoint formats.
       const oldEndpoints = config.endpoints || {}
       return {
-        provider: 'openlist',
+        provider: 'alist',
         baseUrl: config.baseUrl || '',
         rootPath: config.rootPath || '',
         token: config.token || '',
+        username: config.username || '',
+        password: config.password || '',
+        otpCode: config.otpCode || '',
+        loginEndpoint: config.loginEndpoint || '/api/auth/login',
         uploadEndpoint: config.uploadEndpoint ?? oldEndpoints.upload ?? '/api/fs/put',
         downloadEndpoint: config.downloadEndpoint ?? oldEndpoints.download,
-        listEndpoint: config.listEndpoint ?? oldEndpoints.list,
+        listEndpoint: config.listEndpoint ?? oldEndpoints.list ?? '/api/fs/list',
         deleteEndpoint: config.deleteEndpoint ?? oldEndpoints.delete ?? '/api/fs/remove',
         metaEndpoint: config.metaEndpoint ?? oldEndpoints.meta ?? '/api/fs/get',
         pathField: config.pathField ?? 'path',

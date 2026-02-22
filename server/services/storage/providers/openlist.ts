@@ -1,16 +1,19 @@
+import type { AListCompatibleStorageConfig } from '~~/shared/types/storage'
 import type { Logger } from '../../../utils/logger'
 import type { StorageProvider, StorageObject } from '../interfaces'
 
-/**
- * OpenListStorageProvider implements StorageProvider for OpenList API.
- * Since OpenList API endpoints may vary by deployment, we keep them configurable.
- */
-export class OpenListStorageProvider implements StorageProvider {
-  config: OpenListStorageConfig
+type AListApiResponse<T = any> = {
+  code?: number
+  message?: string
+  data?: T
+}
+
+export class AListStorageProvider implements StorageProvider {
+  config: AListCompatibleStorageConfig
   private logger?: Logger['storage']
   private token?: string
 
-  constructor(config: OpenListStorageConfig, logger?: Logger['storage']) {
+  constructor(config: AListCompatibleStorageConfig, logger?: Logger['storage']) {
     this.config = config
     this.logger = logger
   }
@@ -23,26 +26,6 @@ export class OpenListStorageProvider implements StorageProvider {
     return this.config.pathField || 'path'
   }
 
-  private async ensureAuthToken(): Promise<string> {
-    if (this.token) return this.token
-    if (this.config.token) {
-      this.token = this.config.token
-      return this.token
-    }
-    
-    throw new Error('OpenList auth requires a token. Please configure NUXT_PROVIDER_OPENLIST_TOKEN.')
-  }
-
-  private async request(path: string, init: RequestInit = {}): Promise<Response> {
-    const token = await this.ensureAuthToken()
-    const url = `${this.baseUrl}${path}`
-    const headers: Record<string, string> = {
-      ...(init.headers as Record<string, string> | undefined),
-      Authorization: token,
-    }
-    return fetch(url, { ...init, headers })
-  }
-
   private normalizedRoot(): string {
     return (this.config.rootPath || '').replace(/\/+$/g, '').replace(/^\/+/, '')
   }
@@ -50,187 +33,299 @@ export class OpenListStorageProvider implements StorageProvider {
   private withRoot(key: string): string {
     const root = this.normalizedRoot()
     const trimmedKey = key.replace(/^\/+/, '')
-    if (!root) {
-      return trimmedKey
-    }
-    if (trimmedKey === root || trimmedKey.startsWith(`${root}/`)) {
-      return trimmedKey
-    }
+    if (!root) return trimmedKey
+    if (trimmedKey === root || trimmedKey.startsWith(`${root}/`)) return trimmedKey
     return `${root}/${trimmedKey}`
   }
 
   private toAbsolutePath(key: string): string {
-    if (!key || key === '/') {
-      return '/'
-    }
+    if (!key || key === '/') return '/'
     return key.startsWith('/') ? key : `/${key}`
+  }
+
+  private async parseApiResponse<T = any>(
+    resp: Response,
+    action: string,
+  ): Promise<AListApiResponse<T> | null> {
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '')
+      throw new Error(`AList ${action} failed: HTTP ${resp.status}${text ? ` - ${text.slice(0, 200)}` : ''}`)
+    }
+
+    const text = await resp.text().catch(() => '')
+    if (!text) return null
+
+    let payload: AListApiResponse<T>
+    try {
+      payload = JSON.parse(text) as AListApiResponse<T>
+    } catch {
+      throw new Error(`AList ${action} failed: invalid JSON response`)
+    }
+
+    // AList API success contract: code === 200.
+    if (typeof payload.code === 'number' && payload.code !== 200) {
+      throw new Error(`AList ${action} failed: [${payload.code}] ${payload.message || 'Unknown error'}`)
+    }
+
+    return payload
+  }
+
+  private async loginWithPassword(): Promise<string | null> {
+    const username = this.config.username?.trim()
+    const password = this.config.password
+    if (!username || !password) return null
+
+    const loginEndpoint = this.config.loginEndpoint || '/api/auth/login'
+    const loginResp = await fetch(`${this.baseUrl}${loginEndpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username,
+        password,
+        otp_code: this.config.otpCode || '',
+      }),
+    })
+
+    const payload = await this.parseApiResponse<{ token?: string }>(loginResp, 'login')
+    const token = payload?.data?.token
+    if (!token) {
+      throw new Error('AList login failed: token missing in response')
+    }
+    this.token = token
+    return token
+  }
+
+  private async ensureAuthToken(): Promise<string> {
+    if (this.token) return this.token
+
+    if (this.config.token?.trim()) {
+      this.token = this.config.token.trim()
+      return this.token
+    }
+
+    const token = await this.loginWithPassword()
+    if (token) return token
+
+    throw new Error('AList auth requires token or username/password credentials.')
+  }
+
+  private async request(path: string, init: RequestInit = {}): Promise<Response> {
+    const token = await this.ensureAuthToken()
+    const headers: Record<string, string> = {
+      ...(init.headers as Record<string, string> | undefined),
+      Authorization: token,
+    }
+
+    const url = `${this.baseUrl}${path}`
+    const response = await fetch(url, { ...init, headers })
+
+    // Retry once when token is obtained by username/password.
+    if (
+      response.status === 401
+      && !this.config.token
+      && this.config.username
+      && this.config.password
+    ) {
+      this.token = undefined
+      const refreshedToken = await this.ensureAuthToken()
+      headers.Authorization = refreshedToken
+      return fetch(url, { ...init, headers })
+    }
+
+    return response
   }
 
   async create(key: string, fileBuffer: Buffer, contentType?: string): Promise<StorageObject> {
     const rootedKey = this.withRoot(key)
-    const absoluteKey = this.toAbsolutePath(rootedKey)
+    const absolutePath = this.toAbsolutePath(rootedKey)
     const uploadPath = this.config.uploadEndpoint || '/api/fs/put'
 
-    const resp = await this.request(uploadPath, {
+    const response = await this.request(uploadPath, {
       method: 'PUT',
       headers: {
         'Content-Type': contentType || 'application/octet-stream',
         'Content-Length': String(fileBuffer.length),
-        'File-Path': encodeURIComponent(absoluteKey),
+        // AList requires URL-encoded File-Path header for stream upload.
+        'File-Path': encodeURIComponent(absolutePath),
       },
       body: new Uint8Array(fileBuffer),
     })
-
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '')
-      this.logger?.error('OpenList upload failed', { status: resp.status, body: text })
-      throw new Error(`OpenList upload failed: ${resp.status}`)
-    }
-
-    this.logger?.success(`Uploaded object: ${absoluteKey}`)
-    this.logger?.debug?.('OpenList upload details', {
-      originalKey: key,
-      rootedKey,
-      absoluteKey,
-      rootPath: this.normalizedRoot(),
-    })
+    await this.parseApiResponse(response, 'upload')
 
     const meta = await this.getFileMeta(rootedKey)
-    return (
-      meta || {
-        key: rootedKey,
-        size: fileBuffer.length,
-        lastModified: new Date(),
-      }
-    )
+    return meta || {
+      key: rootedKey,
+      size: fileBuffer.length,
+      lastModified: new Date(),
+    }
   }
 
   async delete(key: string): Promise<void> {
     const deletePath = this.config.deleteEndpoint || '/api/fs/remove'
-    const urlPath = `${deletePath}`
     const rootedKey = this.withRoot(key)
     const normalized = rootedKey.replace(/^\/+/, '')
-    const slashIdx = normalized.lastIndexOf('/')
-    const dir = this.toAbsolutePath(slashIdx >= 0 ? normalized.slice(0, slashIdx) : this.normalizedRoot())
-    const name = slashIdx >= 0 ? normalized.slice(slashIdx + 1) : normalized
-    const body = { dir, names: [name] }
+    const slashIndex = normalized.lastIndexOf('/')
+    const dir = this.toAbsolutePath(
+      slashIndex >= 0 ? normalized.slice(0, slashIndex) : this.normalizedRoot(),
+    )
+    const name = slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized
 
-    const resp = await this.request(urlPath, {
+    const response = await this.request(deletePath, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ dir, names: [name] }),
     })
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '')
-      this.logger?.error('OpenList delete failed', { status: resp.status, body: text })
-      throw new Error(`OpenList delete failed: ${resp.status}`)
-    }
-    this.logger?.success(`Deleted object: ${key}`)
+    await this.parseApiResponse(response, 'remove')
   }
 
   async get(key: string): Promise<Buffer | null> {
-    // If download endpoint is not provided, try to resolve raw_url via meta and fetch it
-    const downloadPath = this.config.downloadEndpoint
-    if (!downloadPath) {
-      const info = await this.getFileMeta(this.withRoot(key))
-      const rawUrl = (info as any)?.raw_url || undefined
-      if (!rawUrl) return null
-      const resp = await fetch(rawUrl)
-      if (!resp.ok) return null
-      const arrayBuffer = await resp.arrayBuffer().catch(() => null)
-      if (!arrayBuffer) return null
-      return Buffer.from(arrayBuffer)
+    const rootedKey = this.withRoot(key)
+
+    if (this.config.downloadEndpoint) {
+      const urlPath = `${this.config.downloadEndpoint}?${encodeURIComponent(this.pathField)}=${encodeURIComponent(rootedKey)}`
+      const response = await this.request(urlPath, { method: 'GET' })
+      if (!response.ok) return null
+      const arrayBuffer = await response.arrayBuffer().catch(() => null)
+      return arrayBuffer ? Buffer.from(arrayBuffer) : null
     }
 
-    const rootedKey = this.withRoot(key)
-    const urlPath = `${downloadPath}?${encodeURIComponent(this.pathField)}=${encodeURIComponent(rootedKey)}`
-    const resp = await this.request(urlPath, { method: 'GET' })
-    if (!resp.ok) return null
-    const arrayBuffer = await resp.arrayBuffer().catch(() => null)
-    if (!arrayBuffer) return null
-    return Buffer.from(arrayBuffer)
+    const absolutePath = this.toAbsolutePath(rootedKey)
+    const meta = await this.getFileMetaWithRefresh(rootedKey)
+    const rawUrl = (meta as any)?.raw_url as string | undefined
+    const sign = (meta as any)?.sign as string | undefined
+
+    if (rawUrl) {
+      try {
+        const response = await fetch(rawUrl, {
+          headers: { 'User-Agent': 'pan.baidu.com' },
+          redirect: 'follow',
+        })
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer().catch(() => null)
+          if (arrayBuffer && arrayBuffer.byteLength > 0) {
+            return Buffer.from(arrayBuffer)
+          }
+        }
+      } catch (error) {
+        this.logger?.warn('AList raw_url fetch failed', error)
+      }
+    }
+
+    const signQuery = sign ? `?sign=${encodeURIComponent(sign)}` : ''
+    try {
+      const response = await fetch(`${this.baseUrl}/d${absolutePath}${signQuery}`, {
+        method: 'GET',
+      })
+      if (!response.ok) return null
+      const arrayBuffer = await response.arrayBuffer().catch(() => null)
+      return arrayBuffer ? Buffer.from(arrayBuffer) : null
+    } catch (error) {
+      this.logger?.warn('AList /d fetch failed', error)
+      return null
+    }
   }
 
   getPublicUrl(key: string): string {
     const rootedKey = this.withRoot(key)
-    const { cdnUrl, baseUrl } = this.config
-    const base = cdnUrl || (baseUrl ? `${baseUrl.replace(/\/$/, '')}/d` : '')
-    if (!base) {
-      return ''
+    return `/image/${rootedKey}`
+  }
+
+  private async getFileMetaWithRefresh(rootedKey: string): Promise<StorageObject | null> {
+    const metaPath = this.config.metaEndpoint || '/api/fs/get'
+    const absolutePath = this.toAbsolutePath(rootedKey)
+    const payload = {
+      [this.pathField]: absolutePath,
+      password: '',
+      page: 1,
+      per_page: 0,
+      refresh: true,
     }
-    return `${base.replace(/\/$/, '')}/${rootedKey}`
+
+    const response = await this.request(metaPath, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const result = await this.parseApiResponse<any>(response, 'get metadata')
+    const node = result?.data
+    if (!node) return null
+
+    const output: StorageObject = {
+      key: rootedKey,
+      size: typeof node.size === 'number' ? node.size : undefined,
+      lastModified: node.modified ? new Date(node.modified) : undefined,
+      etag: typeof node.etag === 'string' ? node.etag : undefined,
+    }
+    ;(output as any).raw_url = typeof node.raw_url === 'string' ? node.raw_url : undefined
+    ;(output as any).sign = typeof node.sign === 'string' ? node.sign : undefined
+    return output
   }
 
   async getFileMeta(key: string): Promise<StorageObject | null> {
-    const metaPath = this.config.metaEndpoint || this.config.downloadEndpoint || '/api/fs/get'
     const rootedKey = this.withRoot(key)
-    const urlPath = metaPath
-    const payload: Record<string, any> = {
+    const metaPath = this.config.metaEndpoint || '/api/fs/get'
+    const payload = {
       [this.pathField]: this.toAbsolutePath(rootedKey),
       password: '',
       page: 1,
       per_page: 0,
       refresh: false,
     }
-    const resp = await this.request(urlPath, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '')
-      this.logger?.error('OpenList get file meta failed', { status: resp.status, body: text })
-      return null
-    }
 
-    const data = (await resp.json().catch(() => null)) as any
-    if (!data) return { key }
-    const node = data?.data || {}
-    const size = node?.size
-    const modified = node?.modified || node?.lastModified
-    const etag = node?.etag
-    const rawUrl = node?.raw_url
-    const result: StorageObject = {
-      key: rootedKey,
-      size: typeof size === 'number' ? size : undefined,
-      lastModified: modified ? new Date(modified) : undefined,
-      etag: typeof etag === 'string' ? etag : undefined,
-    }
-    // Attach raw_url as non-standard property for internal usage
-    ;(result as any).raw_url = typeof rawUrl === 'string' ? rawUrl : undefined
-    return result
-  }
-
-  async listAll(): Promise<StorageObject[]> {
-    // Listing API not provided explicitly; return empty array by default.
-    // You can configure custom list endpoint and parsing later.
-    const listPath = this.config.listEndpoint
-    if (!listPath) return []
-    
-    const payload: Record<string, any> = {
-      [this.pathField]: this.toAbsolutePath(this.normalizedRoot()),
-      password: '',
-      page: 1,
-      per_page: 0,
-      refresh: false,
-    }
-    const resp = await this.request(listPath, {
+    const response = await this.request(metaPath, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!resp.ok) return []
-    const data = (await resp.json().catch(() => null)) as any
-    const items: any[] = data?.data || data || []
-    return items
+
+    const result = await this.parseApiResponse<any>(response, 'get metadata')
+    const node = result?.data
+    if (!node) return null
+
+    const output: StorageObject = {
+      key: rootedKey,
+      size: typeof node.size === 'number' ? node.size : undefined,
+      lastModified: node.modified ? new Date(node.modified) : undefined,
+      etag: typeof node.etag === 'string' ? node.etag : undefined,
+    }
+    ;(output as any).raw_url = typeof node.raw_url === 'string' ? node.raw_url : undefined
+    ;(output as any).sign = typeof node.sign === 'string' ? node.sign : undefined
+    return output
+  }
+
+  async listAll(): Promise<StorageObject[]> {
+    const listPath = this.config.listEndpoint || '/api/fs/list'
+    const rootPath = this.normalizedRoot()
+
+    const response = await this.request(listPath, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        [this.pathField]: this.toAbsolutePath(rootPath),
+        password: '',
+        page: 1,
+        per_page: 0,
+        refresh: false,
+      }),
+    })
+
+    const payload = await this.parseApiResponse<{ content?: any[] }>(response, 'list files')
+    const content = payload?.data?.content
+    if (!Array.isArray(content)) return []
+
+    return content
       .map((item) => {
-        const rawKey = item?.path || item?.key || item?.name
-        if (!rawKey) return null
-        const rootedKey = this.withRoot(rawKey)
-        const size = item?.size
-        const lastModified = item?.modified || item?.lastModified || item?.mtime
-        const etag = item?.etag
+        const name = typeof item?.name === 'string' ? item.name : ''
+        const rawPath = typeof item?.path === 'string' ? item.path.replace(/^\/+/, '') : ''
+        const relativePath = rawPath || (rootPath ? `${rootPath}/${name}` : name)
+        if (!relativePath) return null
+
         return {
-          key: rootedKey,
-          size: typeof size === 'number' ? size : undefined,
-          lastModified: lastModified ? new Date(lastModified) : undefined,
-          etag: typeof etag === 'string' ? etag : undefined,
+          key: relativePath,
+          size: typeof item?.size === 'number' ? item.size : undefined,
+          lastModified: item?.modified ? new Date(item.modified) : undefined,
+          etag: typeof item?.etag === 'string' ? item.etag : undefined,
         } as StorageObject
       })
       .filter(Boolean) as StorageObject[]
@@ -241,3 +336,5 @@ export class OpenListStorageProvider implements StorageProvider {
     return all.filter((obj) => /\.(jpe?g|png|webp|gif|bmp|tiff?|heic|heif)$/i.test(obj.key))
   }
 }
+
+export { AListStorageProvider as OpenListStorageProvider }

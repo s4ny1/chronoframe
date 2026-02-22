@@ -74,17 +74,21 @@ export default eventHandler(async (event) => {
       { key: 's3.cdnUrl', type: 'string', defaultValue: '', label: 'settings.storage.s3.cdnUrl.label' },
       { key: 's3.forcePathStyle', type: 'boolean', defaultValue: false, label: 'settings.storage.s3.forcePathStyle.label' },
       { key: 's3.maxKeys', type: 'number', defaultValue: 1000, label: 'settings.storage.s3.maxKeys.label' },
-      // OpenList
-      { key: 'openlist.baseUrl', type: 'string', defaultValue: '', label: 'settings.storage.openlist.baseUrl.label' },
-      { key: 'openlist.rootPath', type: 'string', defaultValue: '/photos', label: 'settings.storage.openlist.rootPath.label' },
-      { key: 'openlist.token', type: 'string', defaultValue: '', label: 'settings.storage.openlist.token.label' },
-      { key: 'openlist.cdnUrl', type: 'string', defaultValue: '', label: 'settings.storage.openlist.cdnUrl.label' },
-      { key: 'openlist.uploadEndpoint', type: 'string', defaultValue: '/api/fs/put', label: 'settings.storage.openlist.uploadEndpoint.label' },
-      { key: 'openlist.downloadEndpoint', type: 'string', defaultValue: '', label: 'settings.storage.openlist.downloadEndpoint.label' },
-      { key: 'openlist.listEndpoint', type: 'string', defaultValue: '', label: 'settings.storage.openlist.listEndpoint.label' },
-      { key: 'openlist.deleteEndpoint', type: 'string', defaultValue: '/api/fs/remove', label: 'settings.storage.openlist.deleteEndpoint.label' },
-      { key: 'openlist.metaEndpoint', type: 'string', defaultValue: '/api/fs/get', label: 'settings.storage.openlist.metaEndpoint.label' },
-      { key: 'openlist.pathField', type: 'string', defaultValue: 'path', label: 'settings.storage.openlist.pathField.label' },
+      // AList
+      { key: 'alist.baseUrl', type: 'string', defaultValue: '', label: 'settings.storage.openlist.baseUrl.label' },
+      { key: 'alist.rootPath', type: 'string', defaultValue: '/photos', label: 'settings.storage.openlist.rootPath.label' },
+      { key: 'alist.token', type: 'string', defaultValue: '', label: 'settings.storage.openlist.token.label' },
+      { key: 'alist.username', type: 'string', defaultValue: '', label: 'settings.storage.openlist.username.label' },
+      { key: 'alist.password', type: 'string', defaultValue: '', label: 'settings.storage.openlist.password.label' },
+      { key: 'alist.otpCode', type: 'string', defaultValue: '', label: 'settings.storage.openlist.otpCode.label' },
+      { key: 'alist.loginEndpoint', type: 'string', defaultValue: '/api/auth/login', label: 'settings.storage.openlist.loginEndpoint.label' },
+      { key: 'alist.cdnUrl', type: 'string', defaultValue: '', label: 'settings.storage.openlist.cdnUrl.label' },
+      { key: 'alist.uploadEndpoint', type: 'string', defaultValue: '/api/fs/put', label: 'settings.storage.openlist.uploadEndpoint.label' },
+      { key: 'alist.downloadEndpoint', type: 'string', defaultValue: '', label: 'settings.storage.openlist.downloadEndpoint.label' },
+      { key: 'alist.listEndpoint', type: 'string', defaultValue: '/api/fs/list', label: 'settings.storage.openlist.listEndpoint.label' },
+      { key: 'alist.deleteEndpoint', type: 'string', defaultValue: '/api/fs/remove', label: 'settings.storage.openlist.deleteEndpoint.label' },
+      { key: 'alist.metaEndpoint', type: 'string', defaultValue: '/api/fs/get', label: 'settings.storage.openlist.metaEndpoint.label' },
+      { key: 'alist.pathField', type: 'string', defaultValue: 'path', label: 'settings.storage.openlist.pathField.label' },
     ]
 
     const fields = storageFields.map(field => {

@@ -117,7 +117,7 @@ export const STORAGE_SETTINGS_UI: Record<string, FieldUIConfig> = {
       },
       { 
         label: 'settings.storage.provider.options.openlist.label', 
-        value: 'openlist', 
+        value: 'alist', 
         icon: 'tabler:stack',
         description: 'settings.storage.provider.options.openlist.description'
       },
@@ -198,65 +198,90 @@ export const STORAGE_SETTINGS_UI: Record<string, FieldUIConfig> = {
     help: 'settings.storage.s3.maxKeys.description',
     visibleIf: { fieldKey: 'provider', value: 's3' }
   },
-  // OpenList
-  'openlist.baseUrl': {
+  // AList
+  'alist.baseUrl': {
     type: 'input',
     required: true,
     placeholder: 'https://alist.example.com',
     help: 'settings.storage.openlist.baseUrl.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.rootPath': {
+  'alist.rootPath': {
     type: 'input',
     required: true,
     placeholder: '/photos',
     help: 'settings.storage.openlist.rootPath.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.token': {
+  'alist.token': {
     type: 'password',
-    required: true,
+    required: false,
     help: 'settings.storage.openlist.token.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.cdnUrl': {
+  'alist.username': {
+    type: 'input',
+    required: false,
+    help: 'settings.storage.openlist.username.description',
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
+  },
+  'alist.password': {
+    type: 'password',
+    required: false,
+    help: 'settings.storage.openlist.password.description',
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
+  },
+  'alist.otpCode': {
+    type: 'input',
+    required: false,
+    help: 'settings.storage.openlist.otpCode.description',
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
+  },
+  'alist.loginEndpoint': {
+    type: 'input',
+    placeholder: '/api/auth/login',
+    help: 'settings.storage.openlist.loginEndpoint.description',
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
+  },
+  'alist.cdnUrl': {
     type: 'input',
     help: 'settings.storage.openlist.cdnUrl.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.uploadEndpoint': {
+  'alist.uploadEndpoint': {
     type: 'input',
     placeholder: '/api/fs/put',
     help: 'settings.storage.openlist.uploadEndpoint.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.downloadEndpoint': {
+  'alist.downloadEndpoint': {
     type: 'input',
     help: 'settings.storage.openlist.downloadEndpoint.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.listEndpoint': {
+  'alist.listEndpoint': {
     type: 'input',
+    placeholder: '/api/fs/list',
     help: 'settings.storage.openlist.listEndpoint.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.deleteEndpoint': {
+  'alist.deleteEndpoint': {
     type: 'input',
     placeholder: '/api/fs/remove',
     help: 'settings.storage.openlist.deleteEndpoint.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.metaEndpoint': {
+  'alist.metaEndpoint': {
     type: 'input',
     placeholder: '/api/fs/get',
     help: 'settings.storage.openlist.metaEndpoint.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
-  'openlist.pathField': {
+  'alist.pathField': {
     type: 'input',
     placeholder: 'path',
     help: 'settings.storage.openlist.pathField.description',
-    visibleIf: { fieldKey: 'provider', value: 'openlist' }
+    visibleIf: { fieldKey: 'provider', value: 'alist' }
   },
 }
 

@@ -25,6 +25,7 @@ COPY --from=build /usr/src/app/.output ./.output
 COPY --from=build /usr/src/app/packages/webgl-image/dist ./packages/webgl-image/dist
 COPY --from=build /usr/src/app/scripts ./scripts
 COPY --from=build /usr/src/app/server/database/migrations ./server/database/migrations
+COPY --from=deps /usr/src/app/node_modules ./node_modules
 
 EXPOSE 3000
 VOLUME ["/app/data"]

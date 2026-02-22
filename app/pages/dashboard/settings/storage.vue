@@ -2,6 +2,7 @@
 import { UChip, UButton } from '#components'
 import type { TableColumn } from '@nuxt/ui'
 import {
+  alistStorageConfigSchema,
   s3StorageConfigSchema,
   localStorageConfigSchema,
   openListStorageConfigSchema,
@@ -33,6 +34,7 @@ const { data: availableStorage, refresh: refreshAvailableStorage } =
 const PROVIDER_ICON = {
   s3: 'tabler:brand-aws',
   local: 'tabler:database',
+  alist: 'tabler:stack',
   openlist: 'tabler:cloud',
 }
 
@@ -59,13 +61,31 @@ const availableStorageColumns: TableColumn<SettingStorageProvider>[] = [
       })
     },
   },
-  { accessorKey: 'name', header: '存储名称' },
-  { accessorKey: 'provider', header: '存储类型' },
+  { accessorKey: 'name', header: 'Storage Name' },
+  { accessorKey: 'provider', header: 'Storage Type' },
   {
     accessorKey: 'actions',
-    header: '操作',
+    header: 'Actions',
     cell: (cell) => {
+      const row = cell.row.original
+      const canTest = row.provider === 's3' || row.provider === 'alist' || row.provider === 'openlist'
+      const isTesting = testingStorageId.value === row.id
       return h('div', { class: 'flex items-center gap-2' }, [
+        canTest
+          ? h(
+              UButton,
+              {
+                size: 'sm',
+                variant: 'soft',
+                color: 'primary',
+                icon: isTesting ? 'tabler:loader-2' : 'tabler:plug-connected',
+                loading: isTesting,
+                disabled: isTesting,
+                onClick: () => onStorageTest(row.id),
+              },
+              { default: () => 'Test Connection' },
+            )
+          : null,
         h(
           UButton,
           {
@@ -74,10 +94,10 @@ const availableStorageColumns: TableColumn<SettingStorageProvider>[] = [
             color: 'error',
             icon: 'tabler:trash',
             disabled:
-              currentStorageProvider.value?.value === cell.row.original.id,
-            onClick: () => onStorageDelete(cell.row.original.id),
+              currentStorageProvider.value?.value === row.id,
+            onClick: () => onStorageDelete(row.id),
           },
-          { default: () => '删除' },
+          { default: () => 'Delete' },
         ),
       ])
     },
@@ -103,12 +123,12 @@ const handleStorageSettingsSubmit = async (close?: () => void) => {
     refreshCurrentStorageProvider()
     close?.()
     toast.add({
-      title: '设置已保存',
+      title: 'Settings saved',
       color: 'success',
     })
   } catch (error) {
     toast.add({
-      title: '保存设置时出错',
+      title: 'Failed to save settings',
       description: (error as Error).message,
       color: 'error',
     })
@@ -116,9 +136,9 @@ const handleStorageSettingsSubmit = async (close?: () => void) => {
 }
 
 const providerOptions = [
-  { label: 'AWS S3 兼容存储', value: 's3', icon: PROVIDER_ICON.s3 },
-  { label: '本地存储', value: 'local', icon: PROVIDER_ICON.local },
-  { label: 'OpenList', value: 'openlist', icon: PROVIDER_ICON.openlist },
+  { label: 'AWS S3 Compatible', value: 's3', icon: PROVIDER_ICON.s3 },
+  { label: 'Local Storage', value: 'local', icon: PROVIDER_ICON.local },
+  { label: 'AList', value: 'alist', icon: PROVIDER_ICON.alist },
 ]
 
 const storageConfigState = reactive<{
@@ -135,12 +155,14 @@ const storageConfigState = reactive<{
   } as any,
 })
 
-// 根据 provider 值动态选择对应的 schema
+// Select schema based on provider.
 const currentStorageSchema = computed(() => {
   const provider = storageConfigState.provider
   switch (provider) {
     case 'local':
       return localStorageConfigSchema
+    case 'alist':
+      return alistStorageConfigSchema
     case 'openlist':
       return openListStorageConfigSchema
     case 's3':
@@ -149,7 +171,7 @@ const currentStorageSchema = computed(() => {
   }
 })
 
-// 获取存储配置的默认值
+// Default storage config by provider.
 const getStorageConfigDefaults = (provider: string): Partial<StorageConfig> => {
   switch (provider) {
     case 'local':
@@ -158,10 +180,11 @@ const getStorageConfigDefaults = (provider: string): Partial<StorageConfig> => {
         basePath: '/data/storage',
         baseUrl: '/storage',
       } as any
-    case 'openlist':
+    case 'alist':
       return {
-        provider: 'openlist',
+        provider: 'alist',
         uploadEndpoint: '/api/fs/put',
+        listEndpoint: '/api/fs/list',
         deleteEndpoint: '/api/fs/remove',
         metaEndpoint: '/api/fs/get',
         pathField: 'path',
@@ -176,10 +199,12 @@ const getStorageConfigDefaults = (provider: string): Partial<StorageConfig> => {
   }
 }
 
-// 动态生成 fields-config，包含翻译键
+// Build fields-config dynamically (with i18n keys).
 const storageFieldsConfig = computed<Record<string, any>>(() => {
   const provider = storageConfigState.provider
-  const baseKey = `settings.storage.${provider}`
+  const baseKey = provider === 'alist'
+    ? 'settings.storage.openlist'
+    : `settings.storage.${provider}`
 
   switch (provider) {
     case 'local':
@@ -198,7 +223,7 @@ const storageFieldsConfig = computed<Record<string, any>>(() => {
           description: $t(`${baseKey}.prefix.description`),
         },
       }
-    case 'openlist':
+    case 'alist':
       return {
         provider: { hidden: true },
         baseUrl: {
@@ -212,6 +237,22 @@ const storageFieldsConfig = computed<Record<string, any>>(() => {
         token: {
           label: $t(`${baseKey}.token.label`),
           description: $t(`${baseKey}.token.description`),
+        },
+        username: {
+          label: $t(`${baseKey}.username.label`),
+          description: $t(`${baseKey}.username.description`),
+        },
+        password: {
+          label: $t(`${baseKey}.password.label`),
+          description: $t(`${baseKey}.password.description`),
+        },
+        otpCode: {
+          label: $t(`${baseKey}.otpCode.label`),
+          description: $t(`${baseKey}.otpCode.description`),
+        },
+        loginEndpoint: {
+          label: $t(`${baseKey}.loginEndpoint.label`),
+          description: $t(`${baseKey}.loginEndpoint.description`),
         },
         uploadEndpoint: {
           label: $t(`${baseKey}.uploadEndpoint.label`),
@@ -303,20 +344,46 @@ const onStorageConfigSubmit = async (
     })
     refreshAvailableStorage()
     toast.add({
-      title: '存储方案已创建',
+      title: 'Storage configuration created',
       color: 'success',
     })
-    // 重置表单
+    // Reset form state
     storageConfigState.name = ''
     storageConfigState.provider = 's3'
     storageConfigState.config = getStorageConfigDefaults('s3')
     close?.()
   } catch (error) {
     toast.add({
-      title: '创建存储方案时出错',
+      title: 'Failed to create storage configuration',
       description: (error as Error).message,
       color: 'error',
     })
+  }
+}
+
+const testingStorageId = ref<number | null>(null)
+
+const onStorageTest = async (storageId: number) => {
+  testingStorageId.value = storageId
+  try {
+    const result = await $fetch<{ success: boolean; message: string }>(
+      `/api/system/settings/storage-config/${storageId}/test`,
+      { method: 'POST' },
+    )
+    toast.add({
+      title: result.message,
+      color: 'success',
+      icon: 'tabler:circle-check',
+    })
+  } catch (error: any) {
+    toast.add({
+      title: 'Connection test failed',
+      description: error?.data?.statusMessage || error?.message || 'Unknown error',
+      color: 'error',
+      icon: 'tabler:circle-x',
+    })
+  } finally {
+    testingStorageId.value = null
   }
 }
 
@@ -327,12 +394,12 @@ const onStorageDelete = async (storageId: number) => {
     })
     refreshAvailableStorage()
     toast.add({
-      title: '存储方案已删除',
+      title: 'Storage configuration deleted',
       color: 'success',
     })
   } catch (error) {
     toast.add({
-      title: '删除存储方案失败',
+      title: 'Failed to delete storage configuration',
       description: (error as Error).message,
       color: 'error',
     })
@@ -352,7 +419,7 @@ const onStorageDelete = async (storageId: number) => {
           <div class="space-y-4">
             <UFormField
               name="storageConfigId"
-              label="存储方案"
+              label="Storage Profile"
               required
               :ui="{
                 container: 'w-full sm:max-w-sm *:w-full',
@@ -377,7 +444,7 @@ const onStorageDelete = async (storageId: number) => {
                 "
                 label-key="label"
                 value-key="value"
-                placeholder="选择存储方案"
+                placeholder="Select a storage profile"
               />
             </UFormField>
           </div>
@@ -385,35 +452,35 @@ const onStorageDelete = async (storageId: number) => {
           <template #footer>
             <div class="flex items-center gap-3">
               <UModal
-                title="变更存储方案"
+                title="Switch Storage Profile"
                 :ui="{ footer: 'justify-end' }"
               >
                 <UButton
                   variant="soft"
                   icon="tabler:device-floppy"
                 >
-                  保存设置
+                  Save Settings
                 </UButton>
 
                 <template #body>
                   <UAlert
                     color="neutral"
                     variant="subtle"
-                    title="注意"
-                    description="变更存储方案之后上传的文件将会存储到新的存储方案中，原方案中已有文件不会被迁移。"
+                    title="Notice"
+                    description="Files uploaded after switching storage will be saved to the new provider. Existing files are not migrated automatically."
                     icon="tabler:arrows-exchange"
                   />
                 </template>
 
                 <template #footer="{ close }">
                   <UButton
-                    label="取消"
+                    label="Cancel"
                     color="neutral"
                     variant="outline"
                     @click="close"
                   />
                   <UButton
-                    label="继续"
+                    label="Continue"
                     variant="soft"
                     icon="tabler:arrows-exchange"
                     type="submit"
@@ -434,10 +501,10 @@ const onStorageDelete = async (storageId: number) => {
         >
           <template #header>
             <div class="w-full flex items-center justify-between">
-              <span>存储方案管理</span>
+              <span>Storage Profile Management</span>
               <div>
                 <USlideover
-                  title="创建存储方案"
+                  title="Create Storage Profile"
                   :ui="{ footer: 'justify-end' }"
                 >
                   <UButton
@@ -445,14 +512,14 @@ const onStorageDelete = async (storageId: number) => {
                     variant="soft"
                     icon="tabler:plus"
                   >
-                    添加存储
+                    Add Storage
                   </UButton>
 
                   <template #body="{ close }">
                     <div class="space-y-4">
-                      <!-- Provider 选择 -->
+                      <!-- Provider selection -->
                       <UFormField
-                        label="存储类型"
+                        label="Storage Type"
                         class="w-full"
                         required
                         :ui="{
@@ -469,7 +536,7 @@ const onStorageDelete = async (storageId: number) => {
                           :items="providerOptions"
                           label-key="label"
                           value-key="value"
-                          placeholder="选择存储类型"
+                          placeholder="Select a storage type"
                           @update:model-value="
                             (val: string) => {
                               storageConfigState.provider = val
@@ -481,7 +548,7 @@ const onStorageDelete = async (storageId: number) => {
                       </UFormField>
 
                       <UFormField
-                        label="存储名称"
+                        label="Storage Name"
                         required
                         :ui="{
                           container: 'sm:max-w-full',
@@ -504,13 +571,13 @@ const onStorageDelete = async (storageId: number) => {
 
                   <template #footer="{ close }">
                     <UButton
-                      label="取消"
+                      label="Cancel"
                       color="neutral"
                       variant="outline"
                       @click="close"
                     />
                     <UButton
-                      label="创建存储"
+                      label="Create Storage"
                       variant="soft"
                       icon="tabler:check"
                       type="submit"
@@ -535,3 +602,5 @@ const onStorageDelete = async (storageId: number) => {
 </template>
 
 <style scoped></style>
+
+

@@ -961,8 +961,8 @@
             "description": "使用 AWS S3、Cloudflare R2 或其他 S3 兼容服务。"
           },
           "openlist": {
-            "label": "OpenList",
-            "description": "连接到 Alist 或 OpenList 实例进行存储。"
+            "label": "AList",
+            "description": "??? AList ???????"
           }
         }
       },
@@ -1020,16 +1020,16 @@
       },
       "openlist": {
         "baseUrl": {
-          "label": "OpenList 基础 URL",
-          "description": "OpenList 服务器的基础 URL"
+          "label": "AList ?? URL",
+          "description": "AList ?????? URL"
         },
         "rootPath": {
           "label": "根路径",
-          "description": "在 OpenList 中存储照片的根路径"
+          "description": "? AList ?????????"
         },
         "token": {
           "label": "身份验证令牌",
-          "description": "OpenList API 身份验证令牌"
+          "description": "AList API ??????"
         },
         "uploadEndpoint": {
           "label": "上传端点",
@@ -1041,7 +1041,7 @@
         },
         "listEndpoint": {
           "label": "列表端点",
-          "description": "用于列出文件的 API 端点（可选）"
+          "description": "??????? API ??????/api/fs/list?"
         },
         "deleteEndpoint": {
           "label": "删除端点",
@@ -1058,16 +1058,40 @@
         "cdnUrl": {
           "label": "CDN URL",
           "description": "用于访问图像的自定义 CDN URL"
+        },
+        "username": {
+          "label": "???",
+          "description": "??? Token ??? AList API ??????"
+        },
+        "password": {
+          "label": "??",
+          "description": "??? Token ??? AList API ?????"
+        },
+        "otpCode": {
+          "label": "OTP ???",
+          "description": "???????????????"
+        },
+        "loginEndpoint": {
+          "label": "????",
+          "description": "AList ?? API ??????/api/auth/login?"
         }
       }
     }
   },
   "wizard": {
     "admin": {
-      "username": { "label": "用户名" },
-      "email": { "label": "电子邮箱" },
-      "password": { "label": "密码" },
-      "confirmPassword": { "label": "确认密码" }
+      "username": {
+        "label": "用户名"
+      },
+      "email": {
+        "label": "电子邮箱"
+      },
+      "password": {
+        "label": "密码"
+      },
+      "confirmPassword": {
+        "label": "确认密码"
+      }
     },
     "map": {
       "provider": {

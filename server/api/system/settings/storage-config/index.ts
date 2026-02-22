@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { settingsManager } from '~~/server/services/settings/settingsManager'
 import {
+  alistStorageConfigSchema,
   localStorageConfigSchema,
   openListStorageConfigSchema,
   s3StorageConfigSchema,
@@ -32,6 +33,11 @@ export default eventHandler(async (event) => {
             name: z.string(),
             provider: z.literal('local'),
             config: localStorageConfigSchema,
+          }),
+          z.object({
+            name: z.string(),
+            provider: z.literal('alist'),
+            config: alistStorageConfigSchema,
           }),
           z.object({
             name: z.string(),

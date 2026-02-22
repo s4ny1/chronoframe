@@ -2,7 +2,7 @@ import type { StorageConfig, StorageProvider } from '.';
 import { S3StorageProvider } from '.'
 import type { Logger } from '../../utils/logger'
 import { LocalStorageProvider } from './providers/local'
-import { OpenListStorageProvider } from './providers/openlist'
+import { AListStorageProvider } from './providers/openlist'
 
 export type StorageManagerEventType = 'provider-changed' | 'provider-error'
 
@@ -29,8 +29,9 @@ export class StorageProviderFactory {
         return new S3StorageProvider(config, logger)
       case 'local':
         return new LocalStorageProvider(config, logger)
+      case 'alist':
       case 'openlist':
-        return new OpenListStorageProvider(config as any, logger)
+        return new AListStorageProvider(config as any, logger)
       default:
         throw new Error(`Unknown storage provider`)
     }

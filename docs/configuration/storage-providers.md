@@ -6,7 +6,7 @@ ChronoFrame supports multiple storage backends to save your photos and thumbnail
 | ------------------------------------------- | :-----: | --------------------------------------- | ------------------ |
 | [**S3 Compatible**](#s3-compatible-storage) |   ✅    | Production environment, cloud storage   | Varies by provider |
 | [**Local Filesystem**](#local-filesystem)   |   ✅    | Testing environment, offline deployment | Free               |
-| [**OpenList**](#openlist-storage)           |   ✅    | Personal cloud storage, NAS             | Free               |
+| [**AList**](#alist-storage)           |   ✅    | Personal cloud storage, NAS             | Free               |
 
 ## S3 Compatible Storage
 
@@ -124,62 +124,74 @@ NUXT_PROVIDER_LOCAL_PATH=/app/data/storage
 NUXT_PROVIDER_LOCAL_BASE_URL=/storage
 ```
 
-## OpenList Storage
+## AList Storage
 
-OpenList is a file listing program that supports multiple cloud storage services.
+AList is a file listing program that supports multiple cloud storage services.
 
 | Environment Variable | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `NUXT_PROVIDER_OPENLIST_BASE_URL` | string | Yes | - | Base URL of the OpenList service |
-| `NUXT_PROVIDER_OPENLIST_ROOT_PATH` | string | Yes | - | Root storage path |
-| `NUXT_PROVIDER_OPENLIST_TOKEN` | string | Required | - | Authentication token (required for authentication) |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_UPLOAD` | string | Optional | `/api/fs/put` | Upload endpoint |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_DOWNLOAD` | string | Optional | - | Download endpoint |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_LIST` | string | Optional | - | List endpoint |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_DELETE` | string | Optional | `/api/fs/remove` | Delete endpoint |
-| `NUXT_PROVIDER_OPENLIST_ENDPOINT_META` | string | Optional | `/api/fs/get` | Metadata endpoint |
-| `NUXT_PROVIDER_OPENLIST_PATH_FIELD` | string | Optional | `path` | Path field name |
-| `NUXT_PROVIDER_OPENLIST_CDN_URL` | string | Optional | - | CDN URL |
+| `NUXT_PROVIDER_ALIST_BASE_URL` | string | Yes | - | Base URL of the AList service |
+| `NUXT_PROVIDER_ALIST_ROOT_PATH` | string | Yes | - | Root storage path |
+| `NUXT_PROVIDER_ALIST_TOKEN` | string | Optional | - | API token (recommended) |
+| `NUXT_PROVIDER_ALIST_USERNAME` | string | Optional | - | Login username (when token is not set) |
+| `NUXT_PROVIDER_ALIST_PASSWORD` | string | Optional | - | Login password (when token is not set) |
+| `NUXT_PROVIDER_ALIST_OTP_CODE` | string | Optional | - | OTP code for 2FA login |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_LOGIN` | string | Optional | `/api/auth/login` | Login endpoint |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_UPLOAD` | string | Optional | `/api/fs/put` | Upload endpoint |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_DOWNLOAD` | string | Optional | - | Download endpoint |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_LIST` | string | Optional | `/api/fs/list` | List endpoint |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_DELETE` | string | Optional | `/api/fs/remove` | Delete endpoint |
+| `NUXT_PROVIDER_ALIST_ENDPOINT_META` | string | Optional | `/api/fs/get` | Metadata endpoint |
+| `NUXT_PROVIDER_ALIST_PATH_FIELD` | string | Optional | `path` | Path field name |
+| `NUXT_PROVIDER_ALIST_CDN_URL` | string | Optional | - | CDN URL |
 
 **Authentication:**
 
-OpenList provider requires token authentication for secure access:
+AList provider supports either token authentication or account login:
 
 ```bash
-NUXT_PROVIDER_OPENLIST_TOKEN=your-static-token
+# Recommended: token auth
+NUXT_PROVIDER_ALIST_TOKEN=your-static-token
+
+# Or: username/password auth
+NUXT_PROVIDER_ALIST_USERNAME=admin
+NUXT_PROVIDER_ALIST_PASSWORD=your-password
+NUXT_PROVIDER_ALIST_OTP_CODE=
 ```
 
 ### Basic Configuration
 
 ```bash
-# Set storage provider to OpenList
-NUXT_STORAGE_PROVIDER=openlist
+# Set storage provider to AList
+NUXT_STORAGE_PROVIDER=alist
 
-# OpenList basic configuration
-NUXT_PROVIDER_OPENLIST_BASE_URL=https://your-openlist-server.com
-NUXT_PROVIDER_OPENLIST_ROOT_PATH=/chronoframe/photos
-# Token is required for authentication
-NUXT_PROVIDER_OPENLIST_TOKEN=your-api-token
+# AList basic configuration
+NUXT_PROVIDER_ALIST_BASE_URL=https://your-alist-server.com
+NUXT_PROVIDER_ALIST_ROOT_PATH=/chronoframe/photos
+# Use token (recommended) or username/password
+NUXT_PROVIDER_ALIST_TOKEN=your-api-token
+# NUXT_PROVIDER_ALIST_USERNAME=admin
+# NUXT_PROVIDER_ALIST_PASSWORD=your-password
 
 # Optional configuration
-NUXT_PROVIDER_OPENLIST_ENDPOINT_UPLOAD=/api/fs/put
-NUXT_PROVIDER_OPENLIST_ENDPOINT_DOWNLOAD=
-NUXT_PROVIDER_OPENLIST_ENDPOINT_LIST=
-NUXT_PROVIDER_OPENLIST_ENDPOINT_DELETE=/api/fs/remove
-NUXT_PROVIDER_OPENLIST_ENDPOINT_META=/api/fs/get
-NUXT_PROVIDER_OPENLIST_PATH_FIELD=path
-NUXT_PROVIDER_OPENLIST_CDN_URL=
+NUXT_PROVIDER_ALIST_ENDPOINT_UPLOAD=/api/fs/put
+NUXT_PROVIDER_ALIST_ENDPOINT_DOWNLOAD=
+NUXT_PROVIDER_ALIST_ENDPOINT_LIST=/api/fs/list
+NUXT_PROVIDER_ALIST_ENDPOINT_DELETE=/api/fs/remove
+NUXT_PROVIDER_ALIST_ENDPOINT_META=/api/fs/get
+NUXT_PROVIDER_ALIST_PATH_FIELD=path
+NUXT_PROVIDER_ALIST_CDN_URL=
 ```
 
 ### Configuration Examples
 
-#### OpenList
+#### AList
 
 ```bash
-NUXT_STORAGE_PROVIDER=openlist
-NUXT_PROVIDER_OPENLIST_BASE_URL=https://your-openlist-server.com
-NUXT_PROVIDER_OPENLIST_ROOT_PATH=/local/chronoframe
-NUXT_PROVIDER_OPENLIST_TOKEN=your-static-token
+NUXT_STORAGE_PROVIDER=alist
+NUXT_PROVIDER_ALIST_BASE_URL=https://your-alist-server.com
+NUXT_PROVIDER_ALIST_ROOT_PATH=/local/chronoframe
+NUXT_PROVIDER_ALIST_TOKEN=your-static-token
 ```
 
 ## Common Issues

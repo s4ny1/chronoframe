@@ -20,11 +20,14 @@ export const localStorageConfigSchema = z.object({
   prefix: z.string().optional(),
 })
 
-export const openListStorageConfigSchema = z.object({
-  provider: z.literal('openlist'),
+const aListStorageConfigFields = {
   baseUrl: z.string().min(1),
   rootPath: z.string().min(1),
-  token: z.string().min(1),
+  token: z.string().min(1).optional(),
+  username: z.string().min(1).optional(),
+  password: z.string().min(1).optional(),
+  otpCode: z.string().optional(),
+  loginEndpoint: z.string().default('/api/auth/login').optional(),
   uploadEndpoint: z.string().default('/api/fs/put').optional(),
   downloadEndpoint: z.string().optional(),
   listEndpoint: z.string().optional(),
@@ -32,11 +35,23 @@ export const openListStorageConfigSchema = z.object({
   metaEndpoint: z.string().default('/api/fs/get').optional(),
   pathField: z.string().default('path').optional(),
   cdnUrl: z.string().optional(),
+} as const
+
+export const alistStorageConfigSchema = z.object({
+  provider: z.literal('alist'),
+  ...aListStorageConfigFields,
+})
+
+// Backward compatibility for existing OpenList configurations.
+export const openListStorageConfigSchema = z.object({
+  provider: z.literal('openlist'),
+  ...aListStorageConfigFields,
 })
 
 export const storageConfigSchema = z.discriminatedUnion('provider', [
   s3StorageConfigSchema,
   localStorageConfigSchema,
+  alistStorageConfigSchema,
   openListStorageConfigSchema,
 ])
 
@@ -44,4 +59,8 @@ export type StorageConfig = z.infer<typeof storageConfigSchema>
 
 export type S3StorageConfig = z.infer<typeof s3StorageConfigSchema>
 export type LocalStorageConfig = z.infer<typeof localStorageConfigSchema>
+export type AListStorageConfig = z.infer<typeof alistStorageConfigSchema>
 export type OpenListStorageConfig = z.infer<typeof openListStorageConfigSchema>
+export type AListCompatibleStorageConfig = Omit<AListStorageConfig, 'provider'> & {
+  provider: 'alist' | 'openlist'
+}

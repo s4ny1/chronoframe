@@ -902,7 +902,7 @@
             "description": "使用 AWS S3、Cloudflare R2 或其他 S3 相容服務。"
           },
           "openlist": {
-            "label": "OpenList",
+            "label": "AList",
             "description": "連接到 Alist 或 OpenList 實例進行儲存。"
           }
         }
@@ -961,16 +961,16 @@
       },
       "openlist": {
         "baseUrl": {
-          "label": "OpenList 基本 URL",
-          "description": "OpenList 伺服器的基本 URL"
+          "label": "AList ?? URL",
+          "description": "AList ?????? URL"
         },
         "rootPath": {
           "label": "根路徑",
-          "description": "在 OpenList 中儲存相片的根路徑"
+          "description": "? AList ?????????"
         },
         "token": {
           "label": "身份驗證令牌",
-          "description": "OpenList API 身份驗證令牌"
+          "description": "AList API ??????"
         },
         "uploadEndpoint": {
           "label": "上傳端點",
@@ -999,16 +999,40 @@
         "cdnUrl": {
           "label": "CDN URL",
           "description": "用於訪問圖像的自訂 CDN URL"
+        },
+        "username": {
+          "label": "?????",
+          "description": "??? Token ??? AList API ????????"
+        },
+        "password": {
+          "label": "??",
+          "description": "??? Token ??? AList API ?????"
+        },
+        "otpCode": {
+          "label": "OTP ???",
+          "description": "????????????????"
+        },
+        "loginEndpoint": {
+          "label": "????",
+          "description": "AList ?? API ??????/api/auth/login?"
         }
       }
     }
   },
   "wizard": {
     "admin": {
-      "username": { "label": "使用者名稱" },
-      "email": { "label": "電子郵件" },
-      "password": { "label": "密碼" },
-      "confirmPassword": { "label": "確認密碼" }
+      "username": {
+        "label": "使用者名稱"
+      },
+      "email": {
+        "label": "電子郵件"
+      },
+      "password": {
+        "label": "密碼"
+      },
+      "confirmPassword": {
+        "label": "確認密碼"
+      }
     },
     "map": {
       "provider": {

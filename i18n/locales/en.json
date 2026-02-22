@@ -959,8 +959,8 @@
             "description": "Use AWS S3, Cloudflare R2, or other S3-compatible services."
           },
           "openlist": {
-            "label": "OpenList",
-            "description": "Connect to an Alist or OpenList instance for storage."
+            "label": "AList",
+            "description": "Connect to an AList instance for storage."
           }
         }
       },
@@ -1018,16 +1018,16 @@
       },
       "openlist": {
         "baseUrl": {
-          "label": "OpenList Base URL",
-          "description": "Base URL of the OpenList server"
+          "label": "AList Base URL",
+          "description": "Base URL of the AList server"
         },
         "rootPath": {
           "label": "Root Path",
-          "description": "Root path for storing photos in OpenList"
+          "description": "Root path for storing photos in AList"
         },
         "token": {
           "label": "Authentication Token",
-          "description": "OpenList API authentication token"
+          "description": "AList API authentication token"
         },
         "uploadEndpoint": {
           "label": "Upload Endpoint",
@@ -1039,7 +1039,7 @@
         },
         "listEndpoint": {
           "label": "List Endpoint",
-          "description": "API endpoint for listing files (optional)"
+          "description": "API endpoint for listing files (default: /api/fs/list)"
         },
         "deleteEndpoint": {
           "label": "Delete Endpoint",
@@ -1056,16 +1056,40 @@
         "cdnUrl": {
           "label": "CDN URL",
           "description": "Custom CDN URL for accessing images"
+        },
+        "username": {
+          "label": "Username",
+          "description": "AList username for API login when token is not provided"
+        },
+        "password": {
+          "label": "Password",
+          "description": "AList password for API login when token is not provided"
+        },
+        "otpCode": {
+          "label": "OTP Code",
+          "description": "Optional one-time password for two-factor login"
+        },
+        "loginEndpoint": {
+          "label": "Login Endpoint",
+          "description": "AList login API endpoint (default: /api/auth/login)"
         }
       }
     }
   },
   "wizard": {
     "admin": {
-      "username": { "label": "Username" },
-      "email": { "label": "Email" },
-      "password": { "label": "Password" },
-      "confirmPassword": { "label": "Confirm Password" }
+      "username": {
+        "label": "Username"
+      },
+      "email": {
+        "label": "Email"
+      },
+      "password": {
+        "label": "Password"
+      },
+      "confirmPassword": {
+        "label": "Confirm Password"
+      }
     },
     "map": {
       "provider": {

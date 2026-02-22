@@ -72,7 +72,7 @@ export default defineNuxtConfig({
     nominatim: {
       baseUrl: 'https://nominatim.openstreetmap.org',
     },
-    STORAGE_PROVIDER: 's3' satisfies 's3' | 'local' | 'openlist',
+    STORAGE_PROVIDER: 's3' satisfies 's3' | 'local' | 'alist' | 'openlist',
     provider: {
       s3: {
         endpoint: '',
@@ -89,32 +89,53 @@ export default defineNuxtConfig({
         baseUrl: '/storage',
         prefix: 'photos/',
       },
-      openlist: {
-        baseUrl: '',
-        rootPath: '',
-        token: '',
-        endpoints: {
-          upload: '/api/fs/put',
-          download: '',
-          list: '',
-          delete: '/api/fs/remove',
-          meta: '/api/fs/get',
-        },
-        pathField: 'path',
-        cdnUrl: '',
+      alist: {
+        baseUrl: process.env.NUXT_PROVIDER_ALIST_BASE_URL || process.env.NUXT_PROVIDER_OPENLIST_BASE_URL || '',
+        rootPath: process.env.NUXT_PROVIDER_ALIST_ROOT_PATH || process.env.NUXT_PROVIDER_OPENLIST_ROOT_PATH || '',
+        token: process.env.NUXT_PROVIDER_ALIST_TOKEN || process.env.NUXT_PROVIDER_OPENLIST_TOKEN || '',
+        username: process.env.NUXT_PROVIDER_ALIST_USERNAME || '',
+        password: process.env.NUXT_PROVIDER_ALIST_PASSWORD || '',
+        otpCode: process.env.NUXT_PROVIDER_ALIST_OTP_CODE || '',
+        loginEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_LOGIN || '/api/auth/login',
+        uploadEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_UPLOAD || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_UPLOAD || '/api/fs/put',
+        downloadEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_DOWNLOAD || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_DOWNLOAD || '',
+        listEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_LIST || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_LIST || '/api/fs/list',
+        deleteEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_DELETE || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_DELETE || '/api/fs/remove',
+        metaEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_META || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_META || '/api/fs/get',
+        pathField: process.env.NUXT_PROVIDER_ALIST_PATH_FIELD || process.env.NUXT_PROVIDER_OPENLIST_PATH_FIELD || 'path',
+        cdnUrl: process.env.NUXT_PROVIDER_ALIST_CDN_URL || process.env.NUXT_PROVIDER_OPENLIST_CDN_URL || '',
       } as {
         baseUrl: string;
         rootPath: string;
         token: string;
-        endpoints: {
-          upload: string;
-          download: string;
-          list: string;
-          delete: string;
-          meta: string;
-        };
+        username: string;
+        password: string;
+        otpCode: string;
+        loginEndpoint: string;
+        uploadEndpoint: string;
+        downloadEndpoint: string;
+        listEndpoint: string;
+        deleteEndpoint: string;
+        metaEndpoint: string;
         pathField: string;
         cdnUrl: string;
+      },
+      // Deprecated alias for backward compatibility.
+      openlist: {
+        baseUrl: process.env.NUXT_PROVIDER_ALIST_BASE_URL || process.env.NUXT_PROVIDER_OPENLIST_BASE_URL || '',
+        rootPath: process.env.NUXT_PROVIDER_ALIST_ROOT_PATH || process.env.NUXT_PROVIDER_OPENLIST_ROOT_PATH || '',
+        token: process.env.NUXT_PROVIDER_ALIST_TOKEN || process.env.NUXT_PROVIDER_OPENLIST_TOKEN || '',
+        username: process.env.NUXT_PROVIDER_ALIST_USERNAME || '',
+        password: process.env.NUXT_PROVIDER_ALIST_PASSWORD || '',
+        otpCode: process.env.NUXT_PROVIDER_ALIST_OTP_CODE || '',
+        loginEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_LOGIN || '/api/auth/login',
+        uploadEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_UPLOAD || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_UPLOAD || '/api/fs/put',
+        downloadEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_DOWNLOAD || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_DOWNLOAD || '',
+        listEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_LIST || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_LIST || '/api/fs/list',
+        deleteEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_DELETE || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_DELETE || '/api/fs/remove',
+        metaEndpoint: process.env.NUXT_PROVIDER_ALIST_ENDPOINT_META || process.env.NUXT_PROVIDER_OPENLIST_ENDPOINT_META || '/api/fs/get',
+        pathField: process.env.NUXT_PROVIDER_ALIST_PATH_FIELD || process.env.NUXT_PROVIDER_OPENLIST_PATH_FIELD || 'path',
+        cdnUrl: process.env.NUXT_PROVIDER_ALIST_CDN_URL || process.env.NUXT_PROVIDER_OPENLIST_CDN_URL || '',
       },
     },
     upload: {
