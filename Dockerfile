@@ -1,7 +1,11 @@
 FROM node:22-alpine AS base
+# 配置 Alpine 镜像源（阿里云）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
+# 配置 npm/pnpm 镜像源
+RUN npm config set registry https://registry.npmmirror.com
 
 FROM base AS deps
 WORKDIR /usr/src/app
@@ -18,7 +22,8 @@ RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build:deps
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
 FROM node:22-alpine AS runtime
-RUN apk update && apk add --no-cache perl exiftool
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+    && apk update && apk add --no-cache perl exiftool
 WORKDIR /app
 
 COPY --from=build /usr/src/app/.output ./.output
