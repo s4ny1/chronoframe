@@ -11,6 +11,8 @@ services:
       - ./data:/app/data
     env_file:
       - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # database:
   #   image: postgres:15-alpine
