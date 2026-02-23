@@ -55,14 +55,45 @@ export default eventHandler(async (event) => {
         if (data?.code === 200) {
           const sign: string = typeof data.data?.sign === 'string' && data.data.sign ? data.data.sign : ''
           const rawUrl: string = typeof data.data?.raw_url === 'string' && data.data.raw_url ? data.data.raw_url : ''
-          // 优先重定向到 raw_url（百度网盘直链，更快）
+
+          // 百度网盘等需要特定 User-Agent / Referer，不能 302 重定向，改为服务端代理
           if (rawUrl) {
-            return sendRedirect(event, rawUrl, 302)
+            try {
+              const proxyResp = await fetch(rawUrl, {
+                headers: { 'User-Agent': 'pan.baidu.com' },
+                redirect: 'follow',
+                signal: AbortSignal.timeout(30000),
+              })
+              if (proxyResp.ok && proxyResp.body) {
+                setResponseHeader(event, 'Content-Type', proxyResp.headers.get('content-type') || guessContentType(key))
+                const contentLength = proxyResp.headers.get('content-length')
+                if (contentLength) setResponseHeader(event, 'Content-Length', contentLength)
+                setResponseHeader(event, 'Cache-Control', 'public, max-age=86400')
+                return proxyResp.body
+              }
+            } catch (e) {
+              logger.chrono.warn('Proxy raw_url failed, falling back', e)
+            }
           }
-          // 次选：/d/path?sign=xxx
+
+          // Fallback: 通过 AList /d/ 路径代理
           const signParam = sign ? `?sign=${encodeURIComponent(sign)}` : ''
           const encodedAbsolutePath = absolutePath.split('/').map(seg => encodeURIComponent(seg)).join('/')
-          return sendRedirect(event, `${baseUrl}/d${encodedAbsolutePath}${signParam}`, 302)
+          try {
+            const dResp = await fetch(`${baseUrl}/d${encodedAbsolutePath}${signParam}`, {
+              redirect: 'follow',
+              signal: AbortSignal.timeout(30000),
+            })
+            if (dResp.ok && dResp.body) {
+              setResponseHeader(event, 'Content-Type', dResp.headers.get('content-type') || guessContentType(key))
+              const contentLength = dResp.headers.get('content-length')
+              if (contentLength) setResponseHeader(event, 'Content-Length', contentLength)
+              setResponseHeader(event, 'Cache-Control', 'public, max-age=86400')
+              return dResp.body
+            }
+          } catch (e) {
+            logger.chrono.warn('Proxy /d/ path failed, falling back to provider.get()', e)
+          }
         }
       }
     } catch (e) {
