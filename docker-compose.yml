@@ -13,7 +13,10 @@ services:
       - .env
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
+networks:
+  my_shared_net:
+    external: true
+    name: app
   # database:
   #   image: postgres:15-alpine
   #   container_name: chronoframe_db
