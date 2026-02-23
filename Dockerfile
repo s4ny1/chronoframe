@@ -9,6 +9,8 @@ RUN npm config set registry https://registry.npmmirror.com
 
 FROM base AS deps
 WORKDIR /usr/src/app
+# node-gyp 编译 better-sqlite3 等原生模块所需的构建工具
+RUN apk add --no-cache python3 make g++
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/webgl-image/package.json ./packages/webgl-image/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
