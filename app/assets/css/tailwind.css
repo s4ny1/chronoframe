@@ -46,7 +46,7 @@
 }
 
 @theme {
-  --font-sans: Rubik, 'Noto Sans SC', sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans', sans-serif;
 
   --leading-normal: normal;
 }

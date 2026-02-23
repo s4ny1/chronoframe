@@ -366,6 +366,7 @@
     "storageSettings": "存储设置",
     "systemSettings": "系统设置",
     "mapAndLocation": "地图和位置",
+    "securitySettings": "安全设置",
     "location": "位置服务"
   },
   "auth": {
@@ -1104,6 +1105,33 @@
           "description": "Mapbox GL JS 的开源分支。"
         }
       }
+    }
+  },
+  "access": {
+    "title": "访问验证",
+    "description": "该站点已启用访问密码保护，请输入密码以继续。",
+    "passwordLabel": "访问密码",
+    "passwordPlaceholder": "请输入访问密码",
+    "submit": "验证",
+    "error": "验证失败",
+    "invalidPassword": "您输入的密码不正确。",
+    "settings": {
+      "title": "访问密码",
+      "description": "设置访问密码以保护您的站点。访客必须输入密码才能查看站点内容。留空则允许自由访问。",
+      "statusEnabled": "已启用访问密码",
+      "statusDisabled": "未设置访问密码，站点可公开访问",
+      "oldPassword": "当前密码",
+      "oldPasswordPlaceholder": "请输入当前密码",
+      "newPassword": "新密码",
+      "newPasswordPlaceholder": "请输入新密码（留空则移除密码）",
+      "newPasswordHint": "留空则移除访问密码",
+      "confirmPassword": "确认密码",
+      "confirmPasswordPlaceholder": "再次输入新密码",
+      "passwordMismatch": "两次输入的密码不一致",
+      "passwordSet": "访问密码已设置",
+      "passwordCleared": "访问密码已移除",
+      "saveFailed": "保存失败",
+      "save": "保存"
     }
   }
 }

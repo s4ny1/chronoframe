@@ -223,9 +223,14 @@ export default defineNuxtConfig({
     },
   },
 
-  ogImage: {
-    fonts: ['Rubik:400', 'Rubik:700', 'Noto+Sans+SC:400', 'Noto+Sans+SC:700'],
+  fonts: {
+    providers: {
+      google: false,
+      googleicons: false,
+    },
   },
+
+  ogImage: {},
 
   dayjs: {
     locales: ['zh-cn', 'zh-hk', 'en'],

@@ -363,6 +363,7 @@
     "generalSettings": "基本設置",
     "appearanceSettings": "外觀設置",
     "mapAndLocation": "地圖和位置",
+    "securitySettings": "安全設定",
     "location": "位置服務"
   },
   "auth": {
@@ -1045,6 +1046,33 @@
           "description": "Mapbox GL JS 的開源分支。"
         }
       }
+    }
+  },
+  "access": {
+    "title": "訪問驗證",
+    "description": "該站點已啟用訪問密碼保護，請輸入密碼以繼續。",
+    "passwordLabel": "訪問密碼",
+    "passwordPlaceholder": "請輸入訪問密碼",
+    "submit": "驗證",
+    "error": "驗證失敗",
+    "invalidPassword": "您輸入的密碼不正確。",
+    "settings": {
+      "title": "訪問密碼",
+      "description": "設定訪問密碼以保護您的站點。訪客必須輸入密碼才能查看站點內容。留空則允許自由訪問。",
+      "statusEnabled": "已啟用訪問密碼",
+      "statusDisabled": "未設定訪問密碼，站點可公開訪問",
+      "oldPassword": "當前密碼",
+      "oldPasswordPlaceholder": "請輸入當前密碼",
+      "newPassword": "新密碼",
+      "newPasswordPlaceholder": "請輸入新密碼（留空則移除密碼）",
+      "newPasswordHint": "留空則移除訪問密碼",
+      "confirmPassword": "確認密碼",
+      "confirmPasswordPlaceholder": "再次輸入新密碼",
+      "passwordMismatch": "兩次輸入的密碼不一致",
+      "passwordSet": "訪問密碼已設定",
+      "passwordCleared": "訪問密碼已移除",
+      "saveFailed": "儲存失敗",
+      "save": "儲存"
     }
   }
 }

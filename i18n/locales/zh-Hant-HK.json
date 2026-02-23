@@ -363,6 +363,7 @@
     "generalSettings": "基本設置",
     "appearanceSettings": "外觀設置",
     "mapAndLocation": "地圖和位置",
+    "securitySettings": "安全設定",
     "location": "位置服務"
   },
   "auth": {

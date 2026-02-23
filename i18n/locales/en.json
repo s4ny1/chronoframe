@@ -364,7 +364,9 @@
     "location": "Location services",
     "generalSettings": "General Settings",
     "appearanceSettings": "Appearance Settings",
-    "mapAndLocation": "Map & Location"
+    "mapAndLocation": "Map & Location",
+    "securitySettings": "Security",
+    "storageSettings": "Storage"
   },
   "auth": {
     "form": {
@@ -1102,6 +1104,33 @@
           "description": "Open-source fork of Mapbox GL JS."
         }
       }
+    }
+  },
+  "access": {
+    "title": "Access Verification",
+    "description": "This site is password protected. Please enter the access password to continue.",
+    "passwordLabel": "Access Password",
+    "passwordPlaceholder": "Enter access password",
+    "submit": "Verify",
+    "error": "Verification Failed",
+    "invalidPassword": "The password you entered is incorrect.",
+    "settings": {
+      "title": "Access Password",
+      "description": "Set an access password to protect your site. Visitors must enter the password to view the site content. Leave empty to allow unrestricted access.",
+      "statusEnabled": "Access password is enabled",
+      "statusDisabled": "Access password is not set, site is publicly accessible",
+      "oldPassword": "Current Password",
+      "oldPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password (leave empty to remove)",
+      "newPasswordHint": "Leave empty to remove the access password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Re-enter new password",
+      "passwordMismatch": "Passwords do not match",
+      "passwordSet": "Access password has been set",
+      "passwordCleared": "Access password has been removed",
+      "saveFailed": "Failed to save",
+      "save": "Save"
     }
   }
 }

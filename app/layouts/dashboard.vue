@@ -53,6 +53,11 @@ const navItems = computed<NavigationMenuItem[][]>(() => [
           to: '/dashboard/settings/map',
         },
         {
+          label: $t('title.securitySettings'),
+          icon: 'tabler:shield-lock',
+          to: '/dashboard/settings/security',
+        },
+        {
           label: $t('title.systemSettings'),
           icon: 'tabler:cpu',
           to: '/dashboard/settings/system',

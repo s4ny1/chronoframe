@@ -363,6 +363,7 @@
     "generalSettings": "一般設定",
     "appearanceSettings": "外観設定",
     "mapAndLocation": "地図と場所",
+    "securitySettings": "セキュリティ",
     "location": "位置情報サービス"
   },
   "auth": {
@@ -1045,6 +1046,33 @@
           "description": "Mapbox GL JS のオープンソースフォーク。"
         }
       }
+    }
+  },
+  "access": {
+    "title": "アクセス認証",
+    "description": "このサイトはパスワードで保護されています。アクセスパスワードを入力してください。",
+    "passwordLabel": "アクセスパスワード",
+    "passwordPlaceholder": "アクセスパスワードを入力",
+    "submit": "認証",
+    "error": "認証失敗",
+    "invalidPassword": "入力されたパスワードが正しくありません。",
+    "settings": {
+      "title": "アクセスパスワード",
+      "description": "アクセスパスワードを設定してサイトを保護します。訪問者はパスワードを入力しないとサイトを閲覧できません。空欄にすると自由にアクセスできます。",
+      "statusEnabled": "アクセスパスワードが有効",
+      "statusDisabled": "アクセスパスワード未設定、サイトは公開アクセス可能",
+      "oldPassword": "現在のパスワード",
+      "oldPasswordPlaceholder": "現在のパスワードを入力",
+      "newPassword": "新しいパスワード",
+      "newPasswordPlaceholder": "新しいパスワードを入力（空欄で削除）",
+      "newPasswordHint": "空欄にするとアクセスパスワードを削除します",
+      "confirmPassword": "パスワード確認",
+      "confirmPasswordPlaceholder": "新しいパスワードを再入力",
+      "passwordMismatch": "パスワードが一致しません",
+      "passwordSet": "アクセスパスワードが設定されました",
+      "passwordCleared": "アクセスパスワードが削除されました",
+      "saveFailed": "保存失敗",
+      "save": "保存"
     }
   }
 }
