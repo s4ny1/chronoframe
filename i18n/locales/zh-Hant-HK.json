@@ -961,16 +961,16 @@
       },
       "openlist": {
         "baseUrl": {
-          "label": "AList ?? URL",
-          "description": "AList ?????? URL"
+          "label": "AList 伺服器 URL",
+          "description": "AList 伺服器嘅基礎 URL"
         },
         "rootPath": {
           "label": "根路徑",
-          "description": "? AList ?????????"
+          "description": "喺 AList 中儲存照片嘅根路徑"
         },
         "token": {
           "label": "身份驗證令牌",
-          "description": "AList API ??????"
+          "description": "AList API 身份驗證令牌"
         },
         "uploadEndpoint": {
           "label": "上傳端點",
@@ -1001,20 +1001,20 @@
           "description": "用於訪問圖像嘅自訂 CDN URL"
         },
         "username": {
-          "label": "?????",
-          "description": "??? Token ??? AList API ????????"
+          "label": "用戶名",
+          "description": "未提供 Token 時用嚟 AList API 登入嘅用戶名"
         },
         "password": {
-          "label": "??",
-          "description": "??? Token ??? AList API ?????"
+          "label": "密碼",
+          "description": "未提供 Token 時用嚟 AList API 登入嘅密碼"
         },
         "otpCode": {
-          "label": "OTP ???",
-          "description": "????????????????"
+          "label": "OTP 驗證碼",
+          "description": "雙重驗證登入嘅一次性密碼（可選）"
         },
         "loginEndpoint": {
-          "label": "????",
-          "description": "AList ?? API ??????/api/auth/login?"
+          "label": "登入端點",
+          "description": "AList 登入 API 端點（預設：/api/auth/login）"
         }
       }
     }

@@ -61,7 +61,8 @@ export default eventHandler(async (event) => {
           }
           // 次选：/d/path?sign=xxx
           const signParam = sign ? `?sign=${encodeURIComponent(sign)}` : ''
-          return sendRedirect(event, `${baseUrl}/d${absolutePath}${signParam}`, 302)
+          const encodedAbsolutePath = absolutePath.split('/').map(seg => encodeURIComponent(seg)).join('/')
+          return sendRedirect(event, `${baseUrl}/d${encodedAbsolutePath}${signParam}`, 302)
         }
       }
     } catch (e) {

@@ -23,9 +23,9 @@ export const localStorageConfigSchema = z.object({
 const aListStorageConfigFields = {
   baseUrl: z.string().min(1),
   rootPath: z.string().min(1),
-  token: z.string().min(1).optional(),
-  username: z.string().min(1).optional(),
-  password: z.string().min(1).optional(),
+  token: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
   otpCode: z.string().optional(),
   loginEndpoint: z.string().default('/api/auth/login').optional(),
   uploadEndpoint: z.string().default('/api/fs/put').optional(),

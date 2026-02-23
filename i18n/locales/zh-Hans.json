@@ -1020,16 +1020,16 @@
       },
       "openlist": {
         "baseUrl": {
-          "label": "AList ?? URL",
-          "description": "AList ?????? URL"
+          "label": "AList 服务器 URL",
+          "description": "AList 服务器的基础 URL"
         },
         "rootPath": {
           "label": "根路径",
-          "description": "? AList ?????????"
+          "description": "在 AList 中存储照片的根路径"
         },
         "token": {
           "label": "身份验证令牌",
-          "description": "AList API ??????"
+          "description": "AList API 身份验证令牌"
         },
         "uploadEndpoint": {
           "label": "上传端点",
@@ -1041,7 +1041,7 @@
         },
         "listEndpoint": {
           "label": "列表端点",
-          "description": "??????? API ??????/api/fs/list?"
+          "description": "用于列出文件的 API 端点（默认：/api/fs/list）"
         },
         "deleteEndpoint": {
           "label": "删除端点",
@@ -1060,20 +1060,20 @@
           "description": "用于访问图像的自定义 CDN URL"
         },
         "username": {
-          "label": "???",
-          "description": "??? Token ??? AList API ??????"
+          "label": "用户名",
+          "description": "未提供 Token 时用于 AList API 登录的用户名"
         },
         "password": {
-          "label": "??",
-          "description": "??? Token ??? AList API ?????"
+          "label": "密码",
+          "description": "未提供 Token 时用于 AList API 登录的密码"
         },
         "otpCode": {
-          "label": "OTP ???",
-          "description": "???????????????"
+          "label": "OTP 验证码",
+          "description": "双重验证登录的一次性密码（可选）"
         },
         "loginEndpoint": {
-          "label": "????",
-          "description": "AList ?? API ??????/api/auth/login?"
+          "label": "登录端点",
+          "description": "AList 登录 API 端点（默认：/api/auth/login）"
         }
       }
     }

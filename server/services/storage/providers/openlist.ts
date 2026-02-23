@@ -227,7 +227,8 @@ export class AListStorageProvider implements StorageProvider {
 
   getPublicUrl(key: string): string {
     const rootedKey = this.withRoot(key)
-    return `/image/${rootedKey}`
+    const encoded = rootedKey.split('/').map(seg => encodeURIComponent(seg)).join('/')
+    return `/image/${encoded}`
   }
 
   private async getFileMetaWithRefresh(rootedKey: string): Promise<StorageObject | null> {

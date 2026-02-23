@@ -961,16 +961,16 @@
       },
       "openlist": {
         "baseUrl": {
-          "label": "AList ??? URL",
-          "description": "AList ???????? URL"
+          "label": "AList サーバー URL",
+          "description": "AList サーバーのベース URL"
         },
         "rootPath": {
           "label": "ルートパス",
-          "description": "AList ?????????????"
+          "description": "AList に写真を保存するルートパス"
         },
         "token": {
           "label": "認証トークン",
-          "description": "AList API ???????"
+          "description": "AList API 認証トークン"
         },
         "uploadEndpoint": {
           "label": "アップロードエンドポイント",
@@ -1001,20 +1001,20 @@
           "description": "画像にアクセスするためのカスタム CDN URL"
         },
         "username": {
-          "label": "?????",
-          "description": "????????????? AList ?????????"
+          "label": "ユーザー名",
+          "description": "トークンが未指定の場合に AList API ログインで使用するユーザー名"
         },
         "password": {
-          "label": "?????",
-          "description": "????????????? AList ?????????"
+          "label": "パスワード",
+          "description": "トークンが未指定の場合に AList API ログインで使用するパスワード"
         },
         "otpCode": {
-          "label": "OTP ???",
-          "description": "2??????????????????"
+          "label": "OTP コード",
+          "description": "2段階認証ログイン用のワンタイムパスワード（オプション）"
         },
         "loginEndpoint": {
-          "label": "???????????",
-          "description": "AList ???? API ??????????: /api/auth/login?"
+          "label": "ログインエンドポイント",
+          "description": "AList ログイン API エンドポイント（デフォルト：/api/auth/login）"
         }
       }
     }
