@@ -55,6 +55,16 @@ Options:
   --service      Docker Compose service name (default: chronoframe)
   --container    Docker container name (default: chronoframe)
   --no-stop      Backup without stopping service (may produce inconsistent sqlite backup)
+e.g.: 
+  # 备份（默认输出到 ./backups）
+  bash scripts/backup-restore.sh backup
+
+  # 还原指定包
+  bash scripts/backup-restore.sh restore --archive /path/to/chronoframe-backup-YYYYmmdd-HHMMSS.tar.gz
+
+  # 还原最新备份包（从 ./backups 自动选最新）
+  bash scripts/backup-restore.sh restore
+
 EOF
 }
 
