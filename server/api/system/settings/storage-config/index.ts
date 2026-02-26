@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { settingsManager } from '~~/server/services/settings/settingsManager'
 import {
+  baiduStorageConfigSchema,
   alistStorageConfigSchema,
   localStorageConfigSchema,
   openListStorageConfigSchema,
@@ -33,6 +34,11 @@ export default eventHandler(async (event) => {
             name: z.string(),
             provider: z.literal('local'),
             config: localStorageConfigSchema,
+          }),
+          z.object({
+            name: z.string(),
+            provider: z.literal('baidu'),
+            config: baiduStorageConfigSchema,
           }),
           z.object({
             name: z.string(),

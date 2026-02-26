@@ -9,11 +9,12 @@ export { eq, and, or, inArray } from 'drizzle-orm'
 // 创建单例数据库连接
 let dbInstance: ReturnType<typeof drizzle> | null = null
 let sqliteInstance: Database.Database | null = null
+const DATABASE_PATH = process.env.DATABASE_URL || 'data/app.sqlite3'
 
 export function useDB() {
   if (!dbInstance || !sqliteInstance) {
     // 创建数据库连接，启用WAL模式以提高并发性能
-    sqliteInstance = new Database('data/app.sqlite3', {
+    sqliteInstance = new Database(DATABASE_PATH, {
       verbose:
         process.env.NODE_ENV === 'development'
           ? logger.dynamic('db').verbose

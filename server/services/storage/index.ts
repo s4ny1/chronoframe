@@ -3,6 +3,7 @@ export { StorageProvider, StorageObject } from './interfaces'
 export {
   s3StorageConfigSchema,
   localStorageConfigSchema,
+  baiduStorageConfigSchema,
   alistStorageConfigSchema,
   openListStorageConfigSchema,
   storageConfigSchema,
@@ -11,6 +12,7 @@ export {
 export {
   S3StorageConfig,
   LocalStorageConfig,
+  BaiduStorageConfig,
   AListStorageConfig,
   AListCompatibleStorageConfig,
   OpenListStorageConfig,
@@ -23,6 +25,7 @@ export type { StorageManagerEventType, StorageManagerEventListener, StorageManag
 
 export { S3StorageProvider } from './providers/s3'
 export { LocalStorageProvider } from './providers/local'
+export { BaiduStorageProvider } from './providers/baidu'
 export { AListStorageProvider } from './providers/openlist'
 export { OpenListStorageProvider } from './providers/openlist'
 

@@ -6,6 +6,7 @@ ChronoFrame supports multiple storage backends to save your photos and thumbnail
 | ------------------------------------------- | :-----: | --------------------------------------- | ------------------ |
 | [**S3 Compatible**](#s3-compatible-storage) |   ✅    | Production environment, cloud storage   | Varies by provider |
 | [**Local Filesystem**](#local-filesystem)   |   ✅    | Testing environment, offline deployment | Free               |
+| [**Baidu Netdisk (Direct)**](#baidu-netdisk-direct) |   ✅   | Direct connection to Baidu Netdisk      | Free               |
 | [**AList**](#alist-storage)           |   ✅    | Personal cloud storage, NAS             | Free               |
 
 ## S3 Compatible Storage
@@ -122,6 +123,32 @@ NUXT_STORAGE_PROVIDER=local
 # Local storage configuration
 NUXT_PROVIDER_LOCAL_PATH=/app/data/storage
 NUXT_PROVIDER_LOCAL_BASE_URL=/storage
+```
+
+## Baidu Netdisk (Direct)
+
+Direct mode uses Baidu Netdisk OpenAPI with `refresh_token` and does not depend on AList.
+
+| Environment Variable | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `NUXT_PROVIDER_BAIDU_REFRESH_TOKEN` | string | Yes | - | Baidu OAuth refresh token |
+| `NUXT_PROVIDER_BAIDU_CLIENT_ID` | string | Optional | built-in | OAuth client ID |
+| `NUXT_PROVIDER_BAIDU_CLIENT_SECRET` | string | Optional | built-in | OAuth client secret |
+| `NUXT_PROVIDER_BAIDU_ROOT_PATH` | string | Optional | `/apps/chronoframe` | Root folder in Baidu Netdisk |
+| `NUXT_PROVIDER_BAIDU_TOKEN_ENDPOINT` | string | Optional | `https://openapi.baidu.com/oauth/2.0/token` | OAuth token endpoint |
+| `NUXT_PROVIDER_BAIDU_XPAN_FILE_ENDPOINT` | string | Optional | `https://pan.baidu.com/rest/2.0/xpan/file` | XPan file API endpoint |
+| `NUXT_PROVIDER_BAIDU_XPAN_MULTIMEDIA_ENDPOINT` | string | Optional | `https://pan.baidu.com/rest/2.0/xpan/multimedia` | XPan metadata endpoint |
+| `NUXT_PROVIDER_BAIDU_PCS_UPLOAD_ENDPOINT` | string | Optional | `https://d.pcs.baidu.com/rest/2.0/pcs/superfile2` | PCS upload endpoint |
+| `NUXT_PROVIDER_BAIDU_CDN_URL` | string | Optional | - | Optional external CDN URL |
+
+### Basic Configuration
+
+```bash
+NUXT_STORAGE_PROVIDER=baidu
+NUXT_PROVIDER_BAIDU_REFRESH_TOKEN=your-refresh-token
+NUXT_PROVIDER_BAIDU_CLIENT_ID=hq9yQ9w9kR4YHj1kyYafLygVocobh7Sf
+NUXT_PROVIDER_BAIDU_CLIENT_SECRET=YH2VpZcFJHYNnV6vLfHQXDBhcE7ZChyE
+NUXT_PROVIDER_BAIDU_ROOT_PATH=/apps/chronoframe
 ```
 
 ## AList Storage

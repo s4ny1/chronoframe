@@ -70,6 +70,13 @@ export class AListStorageProvider implements StorageProvider {
     return payload
   }
 
+  private isNotFoundError(error: unknown): boolean {
+    const message = String((error as Error)?.message || '').toLowerCase()
+    return message.includes('object not found')
+      || message.includes('file not found')
+      || message.includes('[404]')
+  }
+
   private async loginWithPassword(): Promise<string | null> {
     const username = this.config.username?.trim()
     const password = this.config.password
@@ -248,7 +255,13 @@ export class AListStorageProvider implements StorageProvider {
       body: JSON.stringify(payload),
     })
 
-    const result = await this.parseApiResponse<any>(response, 'get metadata')
+    let result: AListApiResponse<any> | null
+    try {
+      result = await this.parseApiResponse<any>(response, 'get metadata')
+    } catch (error) {
+      if (this.isNotFoundError(error)) return null
+      throw error
+    }
     const node = result?.data
     if (!node) return null
 
@@ -280,7 +293,13 @@ export class AListStorageProvider implements StorageProvider {
       body: JSON.stringify(payload),
     })
 
-    const result = await this.parseApiResponse<any>(response, 'get metadata')
+    let result: AListApiResponse<any> | null
+    try {
+      result = await this.parseApiResponse<any>(response, 'get metadata')
+    } catch (error) {
+      if (this.isNotFoundError(error)) return null
+      throw error
+    }
     const node = result?.data
     if (!node) return null
 

@@ -960,6 +960,10 @@
             "label": "S3 Compatible",
             "description": "Use AWS S3, Cloudflare R2, or other S3-compatible services."
           },
+          "baidu": {
+            "label": "Baidu Netdisk",
+            "description": "Directly connect to Baidu Netdisk via refresh token."
+          },
           "openlist": {
             "label": "AList",
             "description": "Connect to an AList instance for storage."
@@ -1016,6 +1020,28 @@
         "prefix": {
           "label": "Storage Prefix",
           "description": "Prefix path for organizing photos in storage"
+        }
+      },
+      "baidu": {
+        "refreshToken": {
+          "label": "Refresh Token",
+          "description": "Baidu OAuth refresh_token used to obtain access_token"
+        },
+        "clientId": {
+          "label": "Client ID",
+          "description": "Baidu OAuth client_id (leave empty to use built-in default)"
+        },
+        "clientSecret": {
+          "label": "Client Secret",
+          "description": "Baidu OAuth client_secret (leave empty to use built-in default)"
+        },
+        "rootPath": {
+          "label": "Root Path",
+          "description": "Root path in Baidu Netdisk, e.g. /apps/chronoframe"
+        },
+        "cdnUrl": {
+          "label": "CDN URL",
+          "description": "Optional CDN URL for image access"
         }
       },
       "openlist": {

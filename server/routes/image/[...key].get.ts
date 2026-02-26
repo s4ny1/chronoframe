@@ -101,7 +101,15 @@ export default eventHandler(async (event) => {
     }
 
     // Fallback：直接代理 Buffer
-    const buf = await provider.get(key) as Buffer | null
+    let buf: Buffer | null = null
+    try {
+      buf = await provider.get(key) as Buffer | null
+    } catch (error) {
+      const message = String((error as Error)?.message || '').toLowerCase()
+      if (!message.includes('object not found') && !message.includes('file not found')) {
+        throw error
+      }
+    }
     if (!buf) throw createError({ statusCode: 404, statusMessage: 'Not found' })
     setResponseHeader(event, 'Content-Type', guessContentType(key))
     return buf
@@ -109,7 +117,25 @@ export default eventHandler(async (event) => {
 
   // 其他 provider：代理 Buffer
   const { storageProvider } = useStorageProvider(event)
-  const photo = await storageProvider.get(key)
+  let photo: Buffer | null = null
+  try {
+    photo = await storageProvider.get(key)
+  } catch (error) {
+    const message = String((error as Error)?.message || '').toLowerCase()
+    if (message.includes('trigger security policy') || message.includes('baidu token refresh failed')) {
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Baidu token refresh blocked by security policy. Use your own client credentials and matching refresh_token, or retry later.',
+      })
+    }
+    if (message.includes('refresh token is invalid') || message.includes('refresh token has been used') || message.includes('expired_token')) {
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Baidu refresh_token is invalid or expired. Update the storage profile with a new refresh_token from the same OAuth client.',
+      })
+    }
+    throw error
+  }
   if (!photo) {
     throw createError({ statusCode: 404, statusMessage: 'Photo not found' })
   }

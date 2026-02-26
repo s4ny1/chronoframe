@@ -3,6 +3,7 @@ import { S3StorageProvider } from '.'
 import type { Logger } from '../../utils/logger'
 import { LocalStorageProvider } from './providers/local'
 import { AListStorageProvider } from './providers/openlist'
+import { BaiduStorageProvider } from './providers/baidu'
 
 export type StorageManagerEventType = 'provider-changed' | 'provider-error'
 
@@ -29,6 +30,8 @@ export class StorageProviderFactory {
         return new S3StorageProvider(config, logger)
       case 'local':
         return new LocalStorageProvider(config, logger)
+      case 'baidu':
+        return new BaiduStorageProvider(config as any, logger)
       case 'alist':
       case 'openlist':
         return new AListStorageProvider(config as any, logger)

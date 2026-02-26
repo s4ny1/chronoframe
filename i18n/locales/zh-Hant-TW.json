@@ -905,6 +905,10 @@
           "openlist": {
             "label": "AList",
             "description": "連接到 Alist 或 OpenList 實例進行儲存。"
+          },
+          "baidu": {
+            "label": "Baidu Netdisk",
+            "description": "Direct connection to Baidu Netdisk using refresh token."
           }
         }
       },
@@ -1016,6 +1020,28 @@
         "loginEndpoint": {
           "label": "登入端點",
           "description": "AList 登入 API 端點（預設：/api/auth/login）"
+        }
+      },
+      "baidu": {
+        "refreshToken": {
+          "label": "Refresh Token",
+          "description": "Baidu OAuth refresh_token used to obtain access_token"
+        },
+        "clientId": {
+          "label": "Client ID",
+          "description": "Baidu OAuth client_id (leave empty to use built-in default)"
+        },
+        "clientSecret": {
+          "label": "Client Secret",
+          "description": "Baidu OAuth client_secret (leave empty to use built-in default)"
+        },
+        "rootPath": {
+          "label": "Root Path",
+          "description": "Root path in Baidu Netdisk, e.g. /apps/chronoframe"
+        },
+        "cdnUrl": {
+          "label": "CDN URL",
+          "description": "Optional CDN URL for image access"
         }
       }
     }

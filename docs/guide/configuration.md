@@ -18,7 +18,7 @@ Whether using Docker or Docker Compose (.env) deployment, configuration is done 
 | NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN          | Mapbox access token (URL restricted), for map services          | None                                  | Required when `NUXT_PUBLIC_MAP_PROVIDER` is `mapbox` |
 | NUXT_NOMINATIM_BASE_URL                  | Nominatim base URL for reverse geocoding service                | `https://nominatim.openstreetmap.org` | No                                                   |
 | NUXT_MAPBOX_ACCESS_TOKEN                 | Mapbox access token (no URL restriction), for location services | None                                  | No                                                   |
-| NUXT_STORAGE_PROVIDER                    | Storage provider, supports `local`, `s3`, `alist`            | `local`                               | Yes                                                  |
+| NUXT_STORAGE_PROVIDER                    | Storage provider, supports `local`, `s3`, `baidu`, `alist`    | `local`                               | Yes                                                  |
 | NUXT_PROVIDER_LOCAL_PATH                 | Local storage path                                              | `/app/data/storage`                   | No                                                   |
 | NUXT_PROVIDER_LOCAL_BASE_URL             | Local storage access URL                                        | `/storage`                            | No                                                   |
 | NUXT_PROVIDER_S3_ENDPOINT                | S3 compatible storage service endpoint                          | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `s3`        |
@@ -28,6 +28,11 @@ Whether using Docker or Docker Compose (.env) deployment, configuration is done 
 | NUXT_PROVIDER_S3_SECRET_ACCESS_KEY       | S3 secret access key                                            | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `s3`        |
 | NUXT_PROVIDER_S3_PREFIX                  | S3 storage prefix                                               | `photos/`                             | No                                                   |
 | NUXT_PROVIDER_S3_CDN_URL                 | S3 storage CDN URL                                              | None                                  | No                                                   |
+| NUXT_PROVIDER_BAIDU_REFRESH_TOKEN        | Baidu OAuth refresh token                                       | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `baidu`     |
+| NUXT_PROVIDER_BAIDU_CLIENT_ID            | Baidu OAuth client ID                                           | Built-in default                      | No                                                   |
+| NUXT_PROVIDER_BAIDU_CLIENT_SECRET        | Baidu OAuth client secret                                       | Built-in default                      | No                                                   |
+| NUXT_PROVIDER_BAIDU_ROOT_PATH            | Baidu root path                                                 | `/apps/chronoframe`                   | No                                                   |
+| NUXT_PROVIDER_BAIDU_CDN_URL              | Baidu CDN URL                                                   | None                                  | No                                                   |
 | NUXT_PROVIDER_ALIST_BASE_URL          | AList server URL                                             | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `alist`  |
 | NUXT_PROVIDER_ALIST_ROOT_PATH         | AList root path                                              | None                                  | Required when `NUXT_STORAGE_PROVIDER` is `alist`  |
 | NUXT_PROVIDER_ALIST_TOKEN             | AList API token                                              | None                                  | Recommended                                       |

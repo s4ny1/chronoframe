@@ -72,7 +72,7 @@ export default defineNuxtConfig({
     nominatim: {
       baseUrl: 'https://nominatim.openstreetmap.org',
     },
-    STORAGE_PROVIDER: 's3' satisfies 's3' | 'local' | 'alist' | 'openlist',
+    STORAGE_PROVIDER: 's3' satisfies 's3' | 'local' | 'baidu' | 'alist' | 'openlist',
     provider: {
       s3: {
         endpoint: '',
@@ -88,6 +88,17 @@ export default defineNuxtConfig({
         localPath: './data/storage',
         baseUrl: '/storage',
         prefix: 'photos/',
+      },
+      baidu: {
+        refreshToken: process.env.NUXT_PROVIDER_BAIDU_REFRESH_TOKEN || '',
+        clientId: process.env.NUXT_PROVIDER_BAIDU_CLIENT_ID || 'hq9yQ9w9kR4YHj1kyYafLygVocobh7Sf',
+        clientSecret: process.env.NUXT_PROVIDER_BAIDU_CLIENT_SECRET || 'YH2VpZcFJHYNnV6vLfHQXDBhcE7ZChyE',
+        rootPath: process.env.NUXT_PROVIDER_BAIDU_ROOT_PATH || '/apps/chronoframe',
+        tokenEndpoint: process.env.NUXT_PROVIDER_BAIDU_TOKEN_ENDPOINT || 'https://openapi.baidu.com/oauth/2.0/token',
+        xpanFileEndpoint: process.env.NUXT_PROVIDER_BAIDU_XPAN_FILE_ENDPOINT || 'https://pan.baidu.com/rest/2.0/xpan/file',
+        xpanMultimediaEndpoint: process.env.NUXT_PROVIDER_BAIDU_XPAN_MULTIMEDIA_ENDPOINT || 'https://pan.baidu.com/rest/2.0/xpan/multimedia',
+        pcsUploadEndpoint: process.env.NUXT_PROVIDER_BAIDU_PCS_UPLOAD_ENDPOINT || 'https://d.pcs.baidu.com/rest/2.0/pcs/superfile2',
+        cdnUrl: process.env.NUXT_PROVIDER_BAIDU_CDN_URL || '',
       },
       alist: {
         baseUrl: process.env.NUXT_PROVIDER_ALIST_BASE_URL || process.env.NUXT_PROVIDER_OPENLIST_BASE_URL || '',

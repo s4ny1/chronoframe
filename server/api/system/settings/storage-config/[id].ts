@@ -1,6 +1,9 @@
 import { z } from 'zod'
 import { settingsManager } from '~~/server/services/settings/settingsManager'
+import { getGlobalStorageManager } from '~~/server/services/storage/events'
+import { logger } from '~~/server/utils/logger'
 import {
+  baiduStorageConfigSchema,
   alistStorageConfigSchema,
   localStorageConfigSchema,
   openListStorageConfigSchema,
@@ -52,6 +55,11 @@ export default eventHandler(async (event) => {
           }),
           z.object({
             name: z.string().optional(),
+            provider: z.literal('baidu'),
+            config: baiduStorageConfigSchema.partial(),
+          }),
+          z.object({
+            name: z.string().optional(),
             provider: z.literal('alist'),
             config: alistStorageConfigSchema.partial(),
           }),
@@ -67,6 +75,15 @@ export default eventHandler(async (event) => {
         storageConfigId,
         updatedStorageConfig,
       )
+
+      const activeProviderId = await settingsManager.get<number>('storage', 'provider')
+      if (activeProviderId === storageConfigId) {
+        const updatedProvider = await settingsManager.storage.getProviderById(storageConfigId)
+        const storageManager = getGlobalStorageManager()
+        if (updatedProvider && storageManager) {
+          await storageManager.registerProvider(updatedProvider.config as any, logger.storage)
+        }
+      }
 
       return { success: true }
     }

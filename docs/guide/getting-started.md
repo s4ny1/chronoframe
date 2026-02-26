@@ -64,7 +64,7 @@ NUXT_PUBLIC_MAP_MAPLIBRE_TOKEN=
 # Mapbox access token for Mapbox
 NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
 
-# Storage provider (local or s3 or alist)
+# Storage provider (local or s3 or baidu or alist)
 NUXT_STORAGE_PROVIDER=local
 NUXT_PROVIDER_LOCAL_PATH=/app/data/storage
 
@@ -83,6 +83,16 @@ NUXT_PROVIDER_S3_ACCESS_KEY_ID=
 NUXT_PROVIDER_S3_SECRET_ACCESS_KEY=
 NUXT_PROVIDER_S3_PREFIX=photos/
 NUXT_PROVIDER_S3_CDN_URL=
+```
+
+If you want to use Baidu Netdisk direct mode instead of local storage, replace the storage section with:
+
+```bash
+NUXT_STORAGE_PROVIDER=baidu
+NUXT_PROVIDER_BAIDU_REFRESH_TOKEN=your-refresh-token
+NUXT_PROVIDER_BAIDU_CLIENT_ID=hq9yQ9w9kR4YHj1kyYafLygVocobh7Sf
+NUXT_PROVIDER_BAIDU_CLIENT_SECRET=YH2VpZcFJHYNnV6vLfHQXDBhcE7ZChyE
+NUXT_PROVIDER_BAIDU_ROOT_PATH=/apps/chronoframe
 ```
 
 If you want to use alist instead of local storage, replace the storage section with:

@@ -963,7 +963,11 @@
           },
           "openlist": {
             "label": "AList",
-            "description": "??? AList ???????"
+            "description": "连接到 AList 实例进行存储。"
+          },
+          "baidu": {
+            "label": "百度网盘",
+            "description": "使用 refresh_token 直连百度网盘。"
           }
         }
       },
@@ -1075,6 +1079,28 @@
         "loginEndpoint": {
           "label": "登录端点",
           "description": "AList 登录 API 端点（默认：/api/auth/login）"
+        }
+      },
+      "baidu": {
+        "refreshToken": {
+          "label": "刷新令牌",
+          "description": "用于获取 access_token 的百度 OAuth refresh_token。"
+        },
+        "clientId": {
+          "label": "客户端 ID",
+          "description": "百度 OAuth client_id（留空则使用内置默认值）。"
+        },
+        "clientSecret": {
+          "label": "客户端密钥",
+          "description": "百度 OAuth client_secret（留空则使用内置默认值）。"
+        },
+        "rootPath": {
+          "label": "根路径",
+          "description": "百度网盘中的根目录，例如 /apps/chronoframe。"
+        },
+        "cdnUrl": {
+          "label": "CDN URL",
+          "description": "可选，自定义用于访问图片的 CDN 地址。"
         }
       }
     }

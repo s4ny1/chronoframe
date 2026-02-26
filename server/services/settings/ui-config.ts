@@ -115,6 +115,12 @@ export const STORAGE_SETTINGS_UI: Record<string, FieldUIConfig> = {
         icon: 'tabler:brand-aws',
         description: 'settings.storage.provider.options.s3.description'
       },
+      {
+        label: 'settings.storage.provider.options.baidu.label',
+        value: 'baidu',
+        icon: 'tabler:brand-baidu',
+        description: 'settings.storage.provider.options.baidu.description'
+      },
       { 
         label: 'settings.storage.provider.options.openlist.label', 
         value: 'alist', 
@@ -197,6 +203,40 @@ export const STORAGE_SETTINGS_UI: Record<string, FieldUIConfig> = {
     type: 'number',
     help: 'settings.storage.s3.maxKeys.description',
     visibleIf: { fieldKey: 'provider', value: 's3' }
+  },
+  // Baidu Netdisk
+  'baidu.refreshToken': {
+    type: 'password',
+    required: true,
+    help: 'settings.storage.baidu.refreshToken.description',
+    visibleIf: { fieldKey: 'provider', value: 'baidu' }
+  },
+  'baidu.clientId': {
+    type: 'input',
+    required: false,
+    placeholder: 'hq9yQ9w9kR4YHj1kyYafLygVocobh7Sf',
+    help: 'settings.storage.baidu.clientId.description',
+    visibleIf: { fieldKey: 'provider', value: 'baidu' }
+  },
+  'baidu.clientSecret': {
+    type: 'password',
+    required: false,
+    placeholder: 'YH2VpZcFJHYNnV6vLfHQXDBhcE7ZChyE',
+    help: 'settings.storage.baidu.clientSecret.description',
+    visibleIf: { fieldKey: 'provider', value: 'baidu' }
+  },
+  'baidu.rootPath': {
+    type: 'input',
+    required: true,
+    placeholder: '/apps/chronoframe',
+    help: 'settings.storage.baidu.rootPath.description',
+    visibleIf: { fieldKey: 'provider', value: 'baidu' }
+  },
+  'baidu.cdnUrl': {
+    type: 'input',
+    required: false,
+    help: 'settings.storage.baidu.cdnUrl.description',
+    visibleIf: { fieldKey: 'provider', value: 'baidu' }
   },
   // AList
   'alist.baseUrl': {

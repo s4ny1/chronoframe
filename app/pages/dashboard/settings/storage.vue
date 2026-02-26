@@ -2,6 +2,7 @@
 import { UChip, UButton } from '#components'
 import type { TableColumn } from '@nuxt/ui'
 import {
+  baiduStorageConfigSchema,
   alistStorageConfigSchema,
   s3StorageConfigSchema,
   localStorageConfigSchema,
@@ -34,6 +35,7 @@ const { data: availableStorage, refresh: refreshAvailableStorage } =
 const PROVIDER_ICON = {
   s3: 'tabler:brand-aws',
   local: 'tabler:database',
+  baidu: 'tabler:brand-baidu',
   alist: 'tabler:stack',
   openlist: 'tabler:cloud',
 }
@@ -68,7 +70,7 @@ const availableStorageColumns: TableColumn<SettingStorageProvider>[] = [
     header: 'Actions',
     cell: (cell) => {
       const row = cell.row.original
-      const canTest = row.provider === 's3' || row.provider === 'alist' || row.provider === 'openlist'
+      const canTest = row.provider === 's3' || row.provider === 'baidu' || row.provider === 'alist' || row.provider === 'openlist'
       const isTesting = testingStorageId.value === row.id
       return h('div', { class: 'flex items-center gap-2' }, [
         canTest
@@ -138,6 +140,7 @@ const handleStorageSettingsSubmit = async (close?: () => void) => {
 const providerOptions = [
   { label: 'AWS S3 Compatible', value: 's3', icon: PROVIDER_ICON.s3 },
   { label: 'Local Storage', value: 'local', icon: PROVIDER_ICON.local },
+  { label: 'Baidu Netdisk', value: 'baidu', icon: PROVIDER_ICON.baidu },
   { label: 'AList', value: 'alist', icon: PROVIDER_ICON.alist },
 ]
 
@@ -161,6 +164,8 @@ const currentStorageSchema = computed(() => {
   switch (provider) {
     case 'local':
       return localStorageConfigSchema
+    case 'baidu':
+      return baiduStorageConfigSchema
     case 'alist':
       return alistStorageConfigSchema
     case 'openlist':
@@ -179,6 +184,14 @@ const getStorageConfigDefaults = (provider: string): Partial<StorageConfig> => {
         provider: 'local',
         basePath: '/data/storage',
         baseUrl: '/storage',
+      } as any
+    case 'baidu':
+      return {
+        provider: 'baidu',
+        refreshToken: '',
+        clientId: 'hq9yQ9w9kR4YHj1kyYafLygVocobh7Sf',
+        clientSecret: 'YH2VpZcFJHYNnV6vLfHQXDBhcE7ZChyE',
+        rootPath: '/apps/chronoframe',
       } as any
     case 'alist':
       return {
@@ -221,6 +234,30 @@ const storageFieldsConfig = computed<Record<string, any>>(() => {
         prefix: {
           label: $t(`${baseKey}.prefix.label`),
           description: $t(`${baseKey}.prefix.description`),
+        },
+      }
+    case 'baidu':
+      return {
+        provider: { hidden: true },
+        refreshToken: {
+          label: $t(`${baseKey}.refreshToken.label`),
+          description: $t(`${baseKey}.refreshToken.description`),
+        },
+        clientId: {
+          label: $t(`${baseKey}.clientId.label`),
+          description: $t(`${baseKey}.clientId.description`),
+        },
+        clientSecret: {
+          label: $t(`${baseKey}.clientSecret.label`),
+          description: $t(`${baseKey}.clientSecret.description`),
+        },
+        rootPath: {
+          label: $t(`${baseKey}.rootPath.label`),
+          description: $t(`${baseKey}.rootPath.description`),
+        },
+        cdnUrl: {
+          label: $t(`${baseKey}.cdnUrl.label`),
+          description: $t(`${baseKey}.cdnUrl.description`),
         },
       }
     case 'alist':

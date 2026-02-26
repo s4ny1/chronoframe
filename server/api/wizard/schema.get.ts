@@ -74,6 +74,12 @@ export default eventHandler(async (event) => {
       { key: 's3.cdnUrl', type: 'string', defaultValue: '', label: 'settings.storage.s3.cdnUrl.label' },
       { key: 's3.forcePathStyle', type: 'boolean', defaultValue: false, label: 'settings.storage.s3.forcePathStyle.label' },
       { key: 's3.maxKeys', type: 'number', defaultValue: 1000, label: 'settings.storage.s3.maxKeys.label' },
+      // Baidu
+      { key: 'baidu.refreshToken', type: 'string', defaultValue: '', label: 'settings.storage.baidu.refreshToken.label' },
+      { key: 'baidu.clientId', type: 'string', defaultValue: 'hq9yQ9w9kR4YHj1kyYafLygVocobh7Sf', label: 'settings.storage.baidu.clientId.label' },
+      { key: 'baidu.clientSecret', type: 'string', defaultValue: 'YH2VpZcFJHYNnV6vLfHQXDBhcE7ZChyE', label: 'settings.storage.baidu.clientSecret.label' },
+      { key: 'baidu.rootPath', type: 'string', defaultValue: '/apps/chronoframe', label: 'settings.storage.baidu.rootPath.label' },
+      { key: 'baidu.cdnUrl', type: 'string', defaultValue: '', label: 'settings.storage.baidu.cdnUrl.label' },
       // AList
       { key: 'alist.baseUrl', type: 'string', defaultValue: '', label: 'settings.storage.openlist.baseUrl.label' },
       { key: 'alist.rootPath', type: 'string', defaultValue: '/photos', label: 'settings.storage.openlist.rootPath.label' },

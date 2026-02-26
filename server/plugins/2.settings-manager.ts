@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS } from '../services/settings/contants'
 import { settingsManager } from '../services/settings/settingsManager'
+import { useDB, tables } from '../utils/db'
 
 export default defineNitroPlugin(async (_nitroApp) => {
   const _settingsManager = settingsManager
@@ -15,10 +16,36 @@ export default defineNitroPlugin(async (_nitroApp) => {
     // Migrate existing configurations from runtimeConfig
     // Note: Storage manager will be initialized in the next plugin (2_storage.ts)
     await migrateRuntimeConfigToSettings()
+    await ensureFirstLaunchState()
   } finally {
     _settingsManager.setInitializingFlag(false)
   }
 })
+
+/**
+ * Seamless migration safeguard:
+ * if existing data is detected, disable onboarding automatically.
+ */
+async function ensureFirstLaunchState() {
+  const _logger = logger.dynamic('settings-bootstrap')
+
+  try {
+    const firstLaunch = await settingsManager.get<boolean>('system', 'firstLaunch')
+    if (firstLaunch !== true) return
+
+    const db = useDB()
+    const hasUser = !!db.select({ id: tables.users.id }).from(tables.users).limit(1).get()
+    const hasPhoto = !!db.select({ id: tables.photos.id }).from(tables.photos).limit(1).get()
+    const hasStorageProvider = !!db.select({ id: tables.settings_storage_providers.id }).from(tables.settings_storage_providers).limit(1).get()
+
+    if (hasUser || hasPhoto || hasStorageProvider) {
+      await settingsManager.set('system', 'firstLaunch', false, undefined, true)
+      _logger.info('Detected existing data and disabled onboarding automatically.')
+    }
+  } catch (error) {
+    _logger.warn('Failed to evaluate first launch state:', error)
+  }
+}
 
 /**
  * Migrate existing configurations from runtimeConfig to the settings system
@@ -103,7 +130,7 @@ async function migrateRuntimeConfigToSettings() {
             
             const providerId = await settingsManager.storage.addProvider({
               name: providerName,
-              provider: storageProvider as 's3' | 'local' | 'alist' | 'openlist',
+              provider: storageProvider as 's3' | 'local' | 'baidu' | 'alist' | 'openlist',
               config: normalizeProviderConfig(storageProvider, providerConfig),
             })
             
@@ -152,6 +179,20 @@ function normalizeProviderConfig(
         basePath: config.localPath || './data/storage',
         baseUrl: config.baseUrl || '/storage',
         prefix: config.prefix || 'photos/',
+      }
+
+    case 'baidu':
+      return {
+        provider: 'baidu',
+        refreshToken: config.refreshToken || '',
+        clientId: config.clientId || 'hq9yQ9w9kR4YHj1kyYafLygVocobh7Sf',
+        clientSecret: config.clientSecret || 'YH2VpZcFJHYNnV6vLfHQXDBhcE7ZChyE',
+        rootPath: config.rootPath || '/apps/chronoframe',
+        tokenEndpoint: config.tokenEndpoint || 'https://openapi.baidu.com/oauth/2.0/token',
+        xpanFileEndpoint: config.xpanFileEndpoint || 'https://pan.baidu.com/rest/2.0/xpan/file',
+        xpanMultimediaEndpoint: config.xpanMultimediaEndpoint || 'https://pan.baidu.com/rest/2.0/xpan/multimedia',
+        pcsUploadEndpoint: config.pcsUploadEndpoint || 'https://d.pcs.baidu.com/rest/2.0/pcs/superfile2',
+        cdnUrl: config.cdnUrl || '',
       }
     
     case 'alist':

@@ -1,7 +1,7 @@
 import type { SettingConfig } from '~~/shared/types/settings'
 
 // 存储提供商的枚举值
-export const STORAGE_PROVIDERS = ['local', 's3', 'alist', 'openlist'] as const
+export const STORAGE_PROVIDERS = ['local', 's3', 'baidu', 'alist', 'openlist'] as const
 export type StorageProvider = (typeof STORAGE_PROVIDERS)[number]
 
 export const DEFAULT_SETTINGS = [

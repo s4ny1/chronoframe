@@ -9,6 +9,8 @@ services:
       - '3000:3000'
     volumes:
       - ./data:/app/data
+    environment:
+      DATABASE_URL: /app/data/app.sqlite3
     env_file:
       - .env
 
