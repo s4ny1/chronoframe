@@ -18,6 +18,7 @@ NODE_MIN_MAJOR="${NODE_MIN_MAJOR:-18}"
 PNPM_PREPARE_VERSION="${PNPM_PREPARE_VERSION:-pnpm@10.18.3}"
 NODE_OPTIONS_VALUE="${NODE_OPTIONS_VALUE:---max-old-space-size=4096}"
 SYSTEMD_SERVICE_NAME="${SYSTEMD_SERVICE_NAME:-chronoframe-source}"
+REPO_UPDATED=0
 
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
 RUN_DIR="${RUN_DIR:-${PROJECT_ROOT}/run}"
@@ -161,6 +162,7 @@ ensure_pnpm() {
 }
 
 update_repo() {
+  REPO_UPDATED=0
   if ! command -v git >/dev/null 2>&1; then
     log "git not found, skipping repository update."
     return 0
@@ -184,8 +186,17 @@ update_repo() {
   fi
 
   log "Updating source code (git pull --ff-only)..."
+  local before after
+  before="$(git rev-parse HEAD 2>/dev/null || echo '')"
   git fetch --all --prune
   git pull --ff-only
+  after="$(git rev-parse HEAD 2>/dev/null || echo '')"
+  if [[ -n "${before}" && -n "${after}" && "${before}" != "${after}" ]]; then
+    REPO_UPDATED=1
+    log "Repository updated: ${before:0:7} -> ${after:0:7}"
+  else
+    log "Repository already up to date."
+  fi
 }
 
 service_exists() {
@@ -221,10 +232,7 @@ install_service() {
   local script_path="${PROJECT_ROOT}/scripts/start-source.sh"
   local pid_file_abs="${PROJECT_ROOT}/run/chronoframe.pid"
 
-  install_system_deps
-  validate_node
-  setup_registry_mirror
-  ensure_pnpm
+  bootstrap_runtime
 
   if [[ ! -f "${script_path}" ]]; then
     die "script not found: ${script_path}"
@@ -356,6 +364,15 @@ run_migration() {
   DATABASE_URL="${DATABASE_URL}" node scripts/migrate.mjs
 }
 
+ensure_runtime_artifacts() {
+  if [[ ! -d node_modules ]]; then
+    die "node_modules not found. Run: bash scripts/start-source.sh install"
+  fi
+  if [[ ! -f .output/server/index.mjs ]]; then
+    die "Build output not found (.output/server/index.mjs). Run: bash scripts/start-source.sh install"
+  fi
+}
+
 is_running() {
   if [[ ! -f "${PID_FILE}" ]]; then
     return 1
@@ -446,6 +463,18 @@ start_flow() {
   if [[ "${UPDATE_ON_START}" == "1" ]]; then
     update_repo
   fi
+  if [[ "${REPO_UPDATED}" == "1" ]]; then
+    setup_registry_mirror
+    ensure_pnpm
+    install_project_deps
+    build_project
+  fi
+  ensure_runtime_artifacts
+  run_migration
+  start_app
+}
+
+bootstrap_runtime() {
   install_system_deps
   validate_node
   setup_registry_mirror
@@ -453,7 +482,6 @@ start_flow() {
   install_project_deps
   build_project
   run_migration
-  start_app
 }
 
 case "${ACTION}" in
