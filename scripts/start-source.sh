@@ -213,7 +213,26 @@ install_project_deps() {
 ensure_oxc_native_binding() {
   [[ -f pnpm-lock.yaml ]] || return 0
   local oxc_version
-  oxc_version="$(grep -m1 -Eo 'oxc-parser@[0-9]+\.[0-9]+\.[0-9]+' pnpm-lock.yaml | sed 's/.*@//' || true)"
+  oxc_version="$(
+    node -e "
+      const fs = require('fs')
+      const path = require('path')
+      const base = path.join(process.cwd(), 'node_modules', '.pnpm')
+      try {
+        const dir = fs.readdirSync(base).find(d => /^oxc-parser@\\d+\\.\\d+\\.\\d+/.test(d))
+        if (dir) {
+          const pkg = path.join(base, dir, 'node_modules', 'oxc-parser', 'package.json')
+          if (fs.existsSync(pkg)) {
+            const json = JSON.parse(fs.readFileSync(pkg, 'utf8'))
+            if (json && json.version) process.stdout.write(String(json.version))
+          }
+        }
+      } catch {}
+    " 2>/dev/null || true
+  )"
+  if [[ -z "${oxc_version}" ]]; then
+    oxc_version="$(grep -Eo 'oxc-parser@[0-9]+\.[0-9]+\.[0-9]+' pnpm-lock.yaml | sed 's/.*@//' | sort -V | tail -n1 || true)"
+  fi
   if [[ -z "${oxc_version}" ]]; then
     log "Cannot detect oxc-parser version, skip binding fix."
     return 0
@@ -235,8 +254,23 @@ ensure_oxc_native_binding() {
   if node -e "require.resolve('${binding_pkg}')" >/dev/null 2>&1; then
     return 0
   fi
-  log "Installing missing oxc binding: ${binding_pkg}@${oxc_version}"
-  npm install --no-save --registry "${NPM_REGISTRY}" "${binding_pkg}@${oxc_version}"
+
+  log "Injecting missing oxc binding: ${binding_pkg}@${oxc_version}"
+  local target_dir tmp_dir tarball
+  target_dir="node_modules/${binding_pkg}"
+  tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/oxc-binding.XXXXXX")"
+
+  tarball="$(cd "${tmp_dir}" && npm pack --silent --registry "${NPM_REGISTRY}" "${binding_pkg}@${oxc_version}" | tail -n1)"
+  [[ -n "${tarball}" && -f "${tmp_dir}/${tarball}" ]] || die "Failed to download ${binding_pkg}@${oxc_version}"
+
+  mkdir -p "${tmp_dir}/extract"
+  tar -xzf "${tmp_dir}/${tarball}" -C "${tmp_dir}/extract"
+  [[ -d "${tmp_dir}/extract/package" ]] || die "Invalid package archive for ${binding_pkg}"
+
+  rm -rf "${target_dir}"
+  mkdir -p "${target_dir}"
+  cp -a "${tmp_dir}/extract/package/." "${target_dir}/"
+  rm -rf "${tmp_dir}"
 }
 
 build_project() {
