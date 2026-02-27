@@ -10,12 +10,14 @@ ACTION="${1:-start}"
 APP_PORT="${APP_PORT:-58081}"
 APP_HOST="${APP_HOST:-0.0.0.0}"
 DATABASE_URL="${DATABASE_URL:-./data/app.sqlite3}"
+UPDATE_ON_START="${UPDATE_ON_START:-1}"
 NODE_ENV_VALUE="${NODE_ENV_VALUE:-production}"
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
 PNPM_REGISTRY="${PNPM_REGISTRY:-https://registry.npmmirror.com}"
 NODE_MIN_MAJOR="${NODE_MIN_MAJOR:-18}"
 PNPM_PREPARE_VERSION="${PNPM_PREPARE_VERSION:-pnpm@10.18.3}"
 NODE_OPTIONS_VALUE="${NODE_OPTIONS_VALUE:---max-old-space-size=4096}"
+SYSTEMD_SERVICE_NAME="${SYSTEMD_SERVICE_NAME:-chronoframe-source}"
 
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
 RUN_DIR="${RUN_DIR:-${PROJECT_ROOT}/run}"
@@ -49,12 +51,18 @@ run_root() {
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/start-source.sh [start|stop|restart|status]
+  bash scripts/start-source.sh [start|stop|restart|status|update|install|uninstall]
+
+Note:
+  start/stop/restart/status operate systemd service.
+  Use install first to register and enable auto-start.
 
 Environment (optional):
   APP_PORT=58081
   APP_HOST=0.0.0.0
   DATABASE_URL=./data/app.sqlite3
+  UPDATE_ON_START=1
+  SYSTEMD_SERVICE_NAME=chronoframe-source
   NPM_REGISTRY=https://registry.npmmirror.com
   PNPM_REGISTRY=https://registry.npmmirror.com
 EOF
@@ -146,6 +154,128 @@ ensure_pnpm() {
   command -v pnpm >/dev/null 2>&1 || die "pnpm installation failed."
   pnpm config set registry "${PNPM_REGISTRY}" >/dev/null
   log "pnpm version: $(pnpm -v)"
+}
+
+update_repo() {
+  if ! command -v git >/dev/null 2>&1; then
+    log "git not found, skipping repository update."
+    return 0
+  fi
+
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log "Not a git repository, skipping update."
+    return 0
+  fi
+
+  if [[ -n "$(git status --porcelain 2>/dev/null || true)" ]]; then
+    log "Working tree has local changes, skipping auto git pull to avoid conflicts."
+    return 0
+  fi
+
+  local upstream
+  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+  if [[ -z "${upstream}" ]]; then
+    log "No upstream branch configured, skipping git pull."
+    return 0
+  fi
+
+  log "Updating source code (git pull --ff-only)..."
+  git fetch --all --prune
+  git pull --ff-only
+}
+
+service_exists() {
+  if ! command -v systemctl >/dev/null 2>&1; then
+    return 1
+  fi
+  systemctl list-unit-files "${SYSTEMD_SERVICE_NAME}.service" --no-legend 2>/dev/null | grep -q "${SYSTEMD_SERVICE_NAME}.service"
+}
+
+service_action() {
+  local action="$1"
+  command -v systemctl >/dev/null 2>&1 || die "systemctl not found."
+  service_exists || die "Service ${SYSTEMD_SERVICE_NAME} not installed. Run: bash scripts/start-source.sh install"
+
+  case "${action}" in
+    status)
+      run_root systemctl --no-pager --full status "${SYSTEMD_SERVICE_NAME}"
+      ;;
+    start|stop|restart)
+      run_root systemctl "${action}" "${SYSTEMD_SERVICE_NAME}"
+      run_root systemctl --no-pager --full status "${SYSTEMD_SERVICE_NAME}" || true
+      ;;
+    *)
+      die "Unsupported service action: ${action}"
+      ;;
+  esac
+}
+
+install_service() {
+  command -v systemctl >/dev/null 2>&1 || die "systemctl not found, cannot install systemd service."
+
+  local service_file="/etc/systemd/system/${SYSTEMD_SERVICE_NAME}.service"
+  local script_path="${PROJECT_ROOT}/scripts/start-source.sh"
+  local pid_file_abs="${PROJECT_ROOT}/run/chronoframe.pid"
+
+  install_system_deps
+  validate_node
+  setup_registry_mirror
+  ensure_pnpm
+
+  if [[ ! -f "${script_path}" ]]; then
+    die "script not found: ${script_path}"
+  fi
+
+  log "Installing systemd service: ${SYSTEMD_SERVICE_NAME}"
+  run_root bash -c "cat > '${service_file}' <<EOF
+[Unit]
+Description=ChronoFrame Source Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+WorkingDirectory=${PROJECT_ROOT}
+ExecStart=/usr/bin/env bash ${script_path} daemon-start
+ExecStop=/usr/bin/env bash ${script_path} daemon-stop
+PIDFile=${pid_file_abs}
+Restart=on-failure
+RestartSec=5
+Environment=APP_PORT=${APP_PORT}
+Environment=APP_HOST=${APP_HOST}
+Environment=DATABASE_URL=${DATABASE_URL}
+Environment=UPDATE_ON_START=${UPDATE_ON_START}
+Environment=NPM_REGISTRY=${NPM_REGISTRY}
+Environment=PNPM_REGISTRY=${PNPM_REGISTRY}
+Environment=NODE_ENV_VALUE=${NODE_ENV_VALUE}
+Environment=NODE_OPTIONS_VALUE=${NODE_OPTIONS_VALUE}
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+
+  run_root systemctl daemon-reload
+  run_root systemctl enable --now "${SYSTEMD_SERVICE_NAME}"
+  run_root systemctl --no-pager --full status "${SYSTEMD_SERVICE_NAME}" || true
+
+  log "Service installed and enabled: ${SYSTEMD_SERVICE_NAME}"
+  log "Boot auto-start: enabled"
+}
+
+uninstall_service() {
+  command -v systemctl >/dev/null 2>&1 || die "systemctl not found, cannot uninstall systemd service."
+
+  local service_file="/etc/systemd/system/${SYSTEMD_SERVICE_NAME}.service"
+  log "Uninstalling systemd service: ${SYSTEMD_SERVICE_NAME}"
+
+  run_root systemctl disable --now "${SYSTEMD_SERVICE_NAME}" >/dev/null 2>&1 || true
+  if run_root test -f "${service_file}"; then
+    run_root rm -f "${service_file}"
+  fi
+  run_root systemctl daemon-reload
+  run_root systemctl reset-failed "${SYSTEMD_SERVICE_NAME}" >/dev/null 2>&1 || true
+
+  log "Service removed: ${SYSTEMD_SERVICE_NAME}"
 }
 
 install_project_deps() {
@@ -254,6 +384,9 @@ status_app() {
 }
 
 start_flow() {
+  if [[ "${UPDATE_ON_START}" == "1" ]]; then
+    update_repo
+  fi
   install_system_deps
   validate_node
   setup_registry_mirror
@@ -266,17 +399,31 @@ start_flow() {
 
 case "${ACTION}" in
   start)
-    start_flow
+    service_action start
     ;;
   stop)
-    stop_app
+    service_action stop
     ;;
   restart)
-    stop_app
-    start_flow
+    service_action restart
     ;;
   status)
-    status_app
+    service_action status
+    ;;
+  update)
+    update_repo
+    ;;
+  daemon-start)
+    start_flow
+    ;;
+  daemon-stop)
+    stop_app
+    ;;
+  install)
+    install_service
+    ;;
+  uninstall)
+    uninstall_service
     ;;
   -h|--help|help)
     usage
