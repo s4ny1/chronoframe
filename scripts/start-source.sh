@@ -194,14 +194,30 @@ install_project_deps() {
     return 0
   fi
 
-  if grep -qiE 'Cannot find native binding|@oxc-parser/binding-linux|parser\.linux-.*\.node' "${install_log}"; then
+  if grep -qiE 'Cannot find native binding|@oxc-(parser|minify|transform)/binding-linux|\.linux-.*\.node' "${install_log}"; then
     log "Detected oxc native binding issue, running recovery install..."
     rm -rf node_modules
     if ! pnpm install --frozen-lockfile --ignore-scripts; then
       pnpm install --ignore-scripts
     fi
-    ensure_oxc_native_binding
-    pnpm exec nuxt prepare
+    ensure_oxc_native_bindings "${install_log}"
+
+    local prepare_log prepared_ok=0 attempt
+    prepare_log="$(mktemp "${TMPDIR:-/tmp}/chronoframe-nuxt-prepare.XXXXXX.log")"
+    for attempt in 1 2 3; do
+      if pnpm exec nuxt prepare 2>&1 | tee "${prepare_log}"; then
+        prepared_ok=1
+        break
+      fi
+      if grep -qiE 'Cannot find native binding|@oxc-(parser|minify|transform)/binding-linux|\.linux-.*\.node' "${prepare_log}"; then
+        log "nuxt prepare failed on attempt ${attempt}, patching missing oxc bindings..."
+        ensure_oxc_native_bindings "${prepare_log}"
+      else
+        break
+      fi
+    done
+    rm -f "${prepare_log}"
+    [[ "${prepared_ok}" -eq 1 ]] || die "nuxt prepare failed after oxc binding recovery."
   else
     log "Frozen lockfile install failed, retrying with normal install..."
     pnpm install
@@ -210,58 +226,46 @@ install_project_deps() {
   rm -f "${install_log}"
 }
 
-ensure_oxc_native_binding() {
-  [[ -f pnpm-lock.yaml ]] || return 0
-  local oxc_version
-  oxc_version="$(
-    node -e "
-      const fs = require('fs')
-      const path = require('path')
-      const base = path.join(process.cwd(), 'node_modules', '.pnpm')
-      try {
-        const dir = fs.readdirSync(base).find(d => /^oxc-parser@\\d+\\.\\d+\\.\\d+/.test(d))
-        if (dir) {
-          const pkg = path.join(base, dir, 'node_modules', 'oxc-parser', 'package.json')
-          if (fs.existsSync(pkg)) {
-            const json = JSON.parse(fs.readFileSync(pkg, 'utf8'))
-            if (json && json.version) process.stdout.write(String(json.version))
-          }
-        }
-      } catch {}
-    " 2>/dev/null || true
-  )"
-  if [[ -z "${oxc_version}" ]]; then
-    oxc_version="$(grep -Eo 'oxc-parser@[0-9]+\.[0-9]+\.[0-9]+' pnpm-lock.yaml | sed 's/.*@//' | sort -V | tail -n1 || true)"
-  fi
-  if [[ -z "${oxc_version}" ]]; then
-    log "Cannot detect oxc-parser version, skip binding fix."
-    return 0
+get_oxc_core_version() {
+  local core="$1"
+  local log_file="${2:-}"
+  local version=""
+
+  if [[ -n "${log_file}" && -f "${log_file}" ]]; then
+    version="$(grep -Eo "node_modules/.pnpm/${core}@[0-9]+\.[0-9]+\.[0-9]+" "${log_file}" | sed -E "s#.*${core}@##" | sort -V | tail -n1 || true)"
   fi
 
-  local arch libc binding_pkg
-  arch="$(node -p 'process.arch' 2>/dev/null || echo '')"
-  case "${arch}" in
-    x64|arm64) ;;
-    *)
-      log "Unsupported arch for oxc auto-fix: ${arch:-unknown}, skip."
-      return 0
-      ;;
-  esac
-  libc="gnu"
-  [[ -f /etc/alpine-release ]] && libc="musl"
-  binding_pkg="@oxc-parser/binding-linux-${arch}-${libc}"
-
-  if node -e "require.resolve('${binding_pkg}')" >/dev/null 2>&1; then
-    return 0
+  if [[ -z "${version}" && -d node_modules/.pnpm ]]; then
+    version="$(find node_modules/.pnpm -maxdepth 1 -type d -name "${core}@*" -printf '%f\n' 2>/dev/null | sed -E "s#^${core}@([0-9]+\.[0-9]+\.[0-9]+).*$#\1#" | sort -V | tail -n1 || true)"
   fi
 
-  log "Injecting missing oxc binding: ${binding_pkg}@${oxc_version}"
+  if [[ -z "${version}" && -f pnpm-lock.yaml ]]; then
+    version="$(grep -Eo "${core}@[0-9]+\.[0-9]+\.[0-9]+" pnpm-lock.yaml | sed -E "s#${core}@##" | sort -V | tail -n1 || true)"
+  fi
+
+  echo "${version}"
+}
+
+inject_oxc_binding() {
+  local binding_pkg="$1"
+  local version="$2"
   local target_dir tmp_dir tarball
+
   target_dir="node_modules/${binding_pkg}"
+
+  local current_version=""
+  if [[ -f "${target_dir}/package.json" ]]; then
+    current_version="$(node -e "const fs=require('fs');const p='${target_dir}/package.json';try{const j=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(String(j.version||''))}catch{}" 2>/dev/null || true)"
+  fi
+  if [[ "${current_version}" == "${version}" ]]; then
+    return 0
+  fi
+
+  log "Injecting missing oxc binding: ${binding_pkg}@${version}"
   tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/oxc-binding.XXXXXX")"
 
-  tarball="$(cd "${tmp_dir}" && npm pack --silent --registry "${NPM_REGISTRY}" "${binding_pkg}@${oxc_version}" | tail -n1)"
-  [[ -n "${tarball}" && -f "${tmp_dir}/${tarball}" ]] || die "Failed to download ${binding_pkg}@${oxc_version}"
+  tarball="$(cd "${tmp_dir}" && npm pack --silent --registry "${NPM_REGISTRY}" "${binding_pkg}@${version}" | tail -n1)"
+  [[ -n "${tarball}" && -f "${tmp_dir}/${tarball}" ]] || die "Failed to download ${binding_pkg}@${version}"
 
   mkdir -p "${tmp_dir}/extract"
   tar -xzf "${tmp_dir}/${tarball}" -C "${tmp_dir}/extract"
@@ -273,7 +277,71 @@ ensure_oxc_native_binding() {
   rm -rf "${tmp_dir}"
 }
 
+ensure_oxc_native_bindings() {
+  local log_file="${1:-}"
+  [[ -f pnpm-lock.yaml ]] || return 0
+
+  local arch libc
+  arch="$(node -p 'process.arch' 2>/dev/null || echo '')"
+  case "${arch}" in
+    x64|arm64) ;;
+    *)
+      log "Unsupported arch for oxc auto-fix: ${arch:-unknown}, skip."
+      return 0
+      ;;
+  esac
+  libc="gnu"
+  [[ -f /etc/alpine-release ]] && libc="musl"
+
+  local cores=("parser" "minify" "transform")
+  local core core_pkg version binding_pkg
+  for core in "${cores[@]}"; do
+    core_pkg="oxc-${core}"
+    version="$(get_oxc_core_version "${core_pkg}" "${log_file}")"
+    if [[ -z "${version}" ]]; then
+      continue
+    fi
+    binding_pkg="@oxc-${core}/binding-linux-${arch}-${libc}"
+    inject_oxc_binding "${binding_pkg}" "${version}"
+  done
+}
+
+verify_oxc_bindings() {
+  local arch libc
+  arch="$(node -p 'process.arch' 2>/dev/null || echo '')"
+  case "${arch}" in
+    x64|arm64) ;;
+    *) return 0 ;;
+  esac
+  libc="gnu"
+  [[ -f /etc/alpine-release ]] && libc="musl"
+
+  local pkgs=(
+    "@oxc-parser/binding-linux-${arch}-${libc}"
+    "@oxc-minify/binding-linux-${arch}-${libc}"
+    "@oxc-transform/binding-linux-${arch}-${libc}"
+  )
+  local pkg
+  for pkg in "${pkgs[@]}"; do
+    if ! node -e "require.resolve('${pkg}')" >/dev/null 2>&1; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+ensure_oxc_bindings_before_build() {
+  if verify_oxc_bindings; then
+    return 0
+  fi
+
+  log "Some oxc bindings are missing, attempting auto recovery..."
+  ensure_oxc_native_bindings
+  verify_oxc_bindings || die "oxc native bindings are still missing after recovery."
+}
+
 build_project() {
+  ensure_oxc_bindings_before_build
   log "Building project..."
   NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm run build:deps
   NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm run build
