@@ -13,9 +13,10 @@ DATABASE_URL="${DATABASE_URL:-./data/app.sqlite3}"
 NODE_ENV_VALUE="${NODE_ENV_VALUE:-production}"
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
 PNPM_REGISTRY="${PNPM_REGISTRY:-https://registry.npmmirror.com}"
-NODE_MIN_MAJOR="${NODE_MIN_MAJOR:-18}"
 PNPM_PREPARE_VERSION="${PNPM_PREPARE_VERSION:-pnpm@10.18.3}"
 NODE_OPTIONS_VALUE="${NODE_OPTIONS_VALUE:---max-old-space-size=4096}"
+NODE_INSTALL_VERSION="${NODE_INSTALL_VERSION:-22.12.0}"
+NODE_MIRROR="${NODE_MIRROR:-https://npmmirror.com/mirrors/node}"
 
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
 RUN_DIR="${RUN_DIR:-${PROJECT_ROOT}/run}"
@@ -63,6 +64,8 @@ Environment (optional):
   DATABASE_URL=./data/app.sqlite3
   NPM_REGISTRY=https://registry.npmmirror.com
   PNPM_REGISTRY=https://registry.npmmirror.com
+  NODE_INSTALL_VERSION=22.12.0
+  NODE_MIRROR=https://npmmirror.com/mirrors/node
 EOF
 }
 
@@ -90,7 +93,7 @@ install_system_deps() {
   case "${pm}" in
     apt)
       run_root apt-get update -y
-      run_root apt-get install -y ca-certificates curl git python3 make g++ perl jq
+      run_root apt-get install -y ca-certificates curl git python3 make g++ perl jq xz-utils
       if ! command -v exiftool >/dev/null 2>&1; then
         run_root apt-get install -y exiftool || run_root apt-get install -y libimage-exiftool-perl
       fi
@@ -99,7 +102,7 @@ install_system_deps() {
       fi
       ;;
     dnf)
-      run_root dnf install -y ca-certificates curl git python3 make gcc-c++ perl jq
+      run_root dnf install -y ca-certificates curl git python3 make gcc-c++ perl jq xz
       if ! command -v exiftool >/dev/null 2>&1; then
         run_root dnf install -y perl-Image-ExifTool || true
       fi
@@ -108,7 +111,7 @@ install_system_deps() {
       fi
       ;;
     yum)
-      run_root yum install -y ca-certificates curl git python3 make gcc-c++ perl jq
+      run_root yum install -y ca-certificates curl git python3 make gcc-c++ perl jq xz
       if ! command -v exiftool >/dev/null 2>&1; then
         run_root yum install -y perl-Image-ExifTool || true
       fi
@@ -124,12 +127,51 @@ install_system_deps() {
 
 validate_node() {
   command -v node >/dev/null 2>&1 || die "Node.js not found. Run: bash scripts/start-source.sh install"
-  local node_major
-  node_major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-  if [[ "${node_major}" -lt "${NODE_MIN_MAJOR}" ]]; then
-    die "Node.js >= ${NODE_MIN_MAJOR} required, current: $(node -v)"
+  local version
+  version="$(node -p 'process.versions.node' 2>/dev/null || echo 0.0.0)"
+  if ! node_version_supported "${version}"; then
+    die "Unsupported Node.js ${version}. Vite requires 20.19+ or 22.12+. Run: bash scripts/start-source.sh install"
   fi
-  log "Node.js version: $(node -v)"
+  log "Node.js version: v${version}"
+}
+
+version_ge() {
+  local v1="$1"
+  local v2="$2"
+  [[ "$(printf '%s\n%s\n' "${v1}" "${v2}" | sort -V | head -n1)" == "${v2}" ]]
+}
+
+node_version_supported() {
+  local version="$1"
+  if version_ge "${version}" "22.12.0"; then
+    return 0
+  fi
+  if version_ge "${version}" "20.19.0" && ! version_ge "${version}" "21.0.0"; then
+    return 0
+  fi
+  return 1
+}
+
+ensure_supported_node_runtime() {
+  if command -v node >/dev/null 2>&1; then
+    local cur
+    cur="$(node -p 'process.versions.node' 2>/dev/null || echo 0.0.0)"
+    if node_version_supported "${cur}"; then
+      log "Node.js already supported: v${cur}"
+      return 0
+    fi
+    log "Node.js v${cur} is not supported by Vite, upgrading..."
+  else
+    log "Node.js not found, installing..."
+  fi
+
+  command -v npm >/dev/null 2>&1 || die "npm not found. Install system deps first."
+  run_root npm install -g n --registry "${NPM_REGISTRY}" >/dev/null
+  run_root env N_NODE_MIRROR="${NODE_MIRROR}" n "${NODE_INSTALL_VERSION}" >/dev/null
+
+  export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+  hash -r
+  validate_node
 }
 
 setup_registry_mirror() {
@@ -436,7 +478,7 @@ start_flow() {
 
 install_flow() {
   install_system_deps
-  validate_node
+  ensure_supported_node_runtime
   setup_registry_mirror
   ensure_pnpm
   install_project_deps
