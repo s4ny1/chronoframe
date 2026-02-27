@@ -137,7 +137,9 @@ validate_node() {
 setup_registry_mirror() {
   log "Configuring npm/pnpm registry mirrors..."
   npm config set registry "${NPM_REGISTRY}" >/dev/null
+  npm config set optional true >/dev/null || true
   export NPM_CONFIG_REGISTRY="${NPM_REGISTRY}"
+  export NPM_CONFIG_OPTIONAL=true
 }
 
 ensure_pnpm() {
@@ -153,6 +155,7 @@ ensure_pnpm() {
 
   command -v pnpm >/dev/null 2>&1 || die "pnpm installation failed."
   pnpm config set registry "${PNPM_REGISTRY}" >/dev/null
+  pnpm config set optional true >/dev/null || true
   log "pnpm version: $(pnpm -v)"
 }
 
@@ -280,10 +283,65 @@ uninstall_service() {
 
 install_project_deps() {
   log "Installing project dependencies..."
-  if ! pnpm install --frozen-lockfile; then
+  local install_log
+  install_log="$(mktemp "${TMPDIR:-/tmp}/chronoframe-pnpm-install.XXXXXX.log")"
+
+  if pnpm install --frozen-lockfile 2>&1 | tee "${install_log}"; then
+    rm -f "${install_log}"
+    return 0
+  fi
+
+  if grep -qiE 'Cannot find native binding|@oxc-parser/binding-linux|parser\.linux-.*\.node' "${install_log}"; then
+    log "Detected oxc native binding issue, running recovery install..."
+    rm -rf node_modules
+    if ! pnpm install --frozen-lockfile --ignore-scripts; then
+      pnpm install --ignore-scripts
+    fi
+    ensure_oxc_native_binding
+    pnpm exec nuxt prepare
+  else
     log "Frozen lockfile install failed, retrying with normal install..."
     pnpm install
   fi
+
+  rm -f "${install_log}"
+}
+
+ensure_oxc_native_binding() {
+  if [[ ! -f pnpm-lock.yaml ]]; then
+    return 0
+  fi
+
+  local oxc_version
+  oxc_version="$(grep -m1 -Eo 'oxc-parser@[0-9]+\.[0-9]+\.[0-9]+' pnpm-lock.yaml | sed 's/.*@//' || true)"
+  if [[ -z "${oxc_version}" ]]; then
+    log "Cannot detect oxc-parser version from pnpm-lock.yaml, skip binding fix."
+    return 0
+  fi
+
+  local arch libc binding_pkg
+  arch="$(node -p 'process.arch' 2>/dev/null || echo '')"
+  case "${arch}" in
+    x64|arm64) ;;
+    *)
+      log "Unsupported arch for oxc auto-fix: ${arch:-unknown}, skip."
+      return 0
+      ;;
+  esac
+
+  libc="gnu"
+  if [[ -f /etc/alpine-release ]]; then
+    libc="musl"
+  fi
+
+  binding_pkg="@oxc-parser/binding-linux-${arch}-${libc}"
+  if node -e "require.resolve('${binding_pkg}')" >/dev/null 2>&1; then
+    log "oxc binding already present: ${binding_pkg}"
+    return 0
+  fi
+
+  log "Installing missing oxc binding: ${binding_pkg}@${oxc_version}"
+  npm install --no-save --registry "${NPM_REGISTRY}" "${binding_pkg}@${oxc_version}"
 }
 
 build_project() {
