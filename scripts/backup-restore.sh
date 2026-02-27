@@ -17,6 +17,9 @@ ARCHIVE_PATH=""
 SERVICE_NAME="chronoframe"
 CONTAINER_NAME="chronoframe"
 NO_STOP=0
+BACKUP_STAGE=""
+BACKUP_SHOULD_RESTART=0
+RESTORE_STAGE=""
 
 if docker compose version >/dev/null 2>&1; then
   COMPOSE_CMD=(docker compose)
@@ -29,6 +32,22 @@ fi
 
 compose() {
   "${COMPOSE_CMD[@]}" "$@"
+}
+
+cleanup_backup() {
+  if [[ "${BACKUP_SHOULD_RESTART:-0}" -eq 1 ]]; then
+    echo "Restarting service ${SERVICE_NAME}..."
+    compose up -d "${SERVICE_NAME}" >/dev/null || true
+  fi
+  if [[ -n "${BACKUP_STAGE:-}" && -d "${BACKUP_STAGE}" ]]; then
+    rm -rf "${BACKUP_STAGE}"
+  fi
+}
+
+cleanup_restore() {
+  if [[ -n "${RESTORE_STAGE:-}" && -d "${RESTORE_STAGE}" ]]; then
+    rm -rf "${RESTORE_STAGE}"
+  fi
 }
 
 require_cmd() {
@@ -133,17 +152,11 @@ backup() {
 
   local stage
   stage="$(mktemp -d "${TMPDIR:-/tmp}/chronoframe-backup.XXXXXX")"
-  local should_restart=0
+  BACKUP_STAGE="${stage}"
+  BACKUP_SHOULD_RESTART=0
   local was_running=0
 
-  cleanup() {
-    if [[ ${should_restart} -eq 1 ]]; then
-      echo "Restarting service ${SERVICE_NAME}..."
-      compose up -d "${SERVICE_NAME}" >/dev/null
-    fi
-    rm -rf "${stage}"
-  }
-  trap cleanup EXIT
+  trap cleanup_backup EXIT
 
   local image_ref
   image_ref="$(get_image_ref)"
@@ -159,7 +172,7 @@ backup() {
   if [[ ${was_running} -eq 1 && ${NO_STOP} -eq 0 ]]; then
     echo "Stopping service ${SERVICE_NAME} for consistent backup..."
     compose stop "${SERVICE_NAME}" >/dev/null
-    should_restart=1
+    BACKUP_SHOULD_RESTART=1
   elif [[ ${was_running} -eq 1 && ${NO_STOP} -eq 1 ]]; then
     echo "Warning: --no-stop enabled, backup may be inconsistent."
   fi
@@ -205,7 +218,8 @@ restore() {
   ts="$(date +%Y%m%d-%H%M%S)"
   local stage
   stage="$(mktemp -d "${TMPDIR:-/tmp}/chronoframe-restore.XXXXXX")"
-  trap 'rm -rf "${stage}"' EXIT
+  RESTORE_STAGE="${stage}"
+  trap cleanup_restore EXIT
 
   echo "Extracting archive: ${ARCHIVE_PATH}"
   tar -C "${stage}" -xzf "${ARCHIVE_PATH}"
