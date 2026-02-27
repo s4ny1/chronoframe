@@ -184,19 +184,15 @@ setup_registry_mirror() {
 }
 
 ensure_pnpm() {
-  if command -v corepack >/dev/null 2>&1; then
-    corepack enable >/dev/null 2>&1 || true
-    corepack prepare "${PNPM_PREPARE_VERSION}" --activate >/dev/null 2>&1 || true
-  fi
-
-  if ! command -v pnpm >/dev/null 2>&1; then
-    log "pnpm not found, installing with npm mirror..."
-    npm install -g "${PNPM_PREPARE_VERSION%%@*}" --registry "${NPM_REGISTRY}" >/dev/null
-  fi
-
-  command -v pnpm >/dev/null 2>&1 || die "pnpm install failed."
+  local want_version="${PNPM_PREPARE_VERSION#pnpm@}"
+  log "Installing/refreshing pnpm ${want_version} via npm registry mirror..."
+  run_root npm install -g "${PNPM_PREPARE_VERSION}" --registry "${NPM_REGISTRY}" >/dev/null
+  export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+  hash -r
+  command -v pnpm >/dev/null 2>&1 || die "pnpm installation failed."
   pnpm config set registry "${PNPM_REGISTRY}" >/dev/null
   pnpm config delete optional >/dev/null 2>&1 || true
+  log "pnpm path: $(command -v pnpm)"
   log "pnpm version: $(pnpm -v)"
 }
 
@@ -268,44 +264,41 @@ install_project_deps() {
   rm -f "${install_log}"
 }
 
-get_oxc_core_version() {
+get_oxc_core_versions() {
   local core="$1"
   local log_file="${2:-}"
-  local version=""
+  {
+    if [[ -n "${log_file}" && -f "${log_file}" ]]; then
+      grep -Eo "node_modules/.pnpm/${core}@[0-9]+\.[0-9]+\.[0-9]+" "${log_file}" | sed -E "s#.*${core}@##" || true
+    fi
 
-  if [[ -n "${log_file}" && -f "${log_file}" ]]; then
-    version="$(grep -Eo "node_modules/.pnpm/${core}@[0-9]+\.[0-9]+\.[0-9]+" "${log_file}" | sed -E "s#.*${core}@##" | sort -V | tail -n1 || true)"
-  fi
+    if [[ -d node_modules/.pnpm ]]; then
+      find node_modules/.pnpm -maxdepth 1 -type d -name "${core}@*" 2>/dev/null \
+        | sed -E "s#^.*/${core}@([0-9]+\.[0-9]+\.[0-9]+).*$#\1#" || true
+    fi
 
-  if [[ -z "${version}" && -d node_modules/.pnpm ]]; then
-    version="$(find node_modules/.pnpm -maxdepth 1 -type d -name "${core}@*" -printf '%f\n' 2>/dev/null | sed -E "s#^${core}@([0-9]+\.[0-9]+\.[0-9]+).*$#\1#" | sort -V | tail -n1 || true)"
-  fi
-
-  if [[ -z "${version}" && -f pnpm-lock.yaml ]]; then
-    version="$(grep -Eo "${core}@[0-9]+\.[0-9]+\.[0-9]+" pnpm-lock.yaml | sed -E "s#${core}@##" | sort -V | tail -n1 || true)"
-  fi
-
-  echo "${version}"
+    if [[ -f pnpm-lock.yaml ]]; then
+      grep -Eo "${core}@[0-9]+\.[0-9]+\.[0-9]+" pnpm-lock.yaml | sed -E "s#${core}@##" || true
+    fi
+  } | awk 'NF' | sort -Vu
 }
 
-inject_oxc_binding() {
+get_binding_payload_dir() {
   local binding_pkg="$1"
   local version="$2"
-  local target_dir tmp_dir tarball
+  local cache_root cache_key payload_dir tmp_dir tarball
 
-  target_dir="node_modules/${binding_pkg}"
+  cache_root="${TMPDIR:-/tmp}/chronoframe-oxc-bindings-cache"
+  cache_key="$(echo "${binding_pkg}-${version}" | tr '/:@' '___')"
+  payload_dir="${cache_root}/${cache_key}"
 
-  local current_version=""
-  if [[ -f "${target_dir}/package.json" ]]; then
-    current_version="$(node -e "const fs=require('fs');const p='${target_dir}/package.json';try{const j=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(String(j.version||''))}catch{}" 2>/dev/null || true)"
-  fi
-  if [[ "${current_version}" == "${version}" ]]; then
+  if [[ -d "${payload_dir}" && -f "${payload_dir}/package.json" ]]; then
+    echo "${payload_dir}"
     return 0
   fi
 
-  log "Injecting missing oxc binding: ${binding_pkg}@${version}"
+  mkdir -p "${cache_root}"
   tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/oxc-binding.XXXXXX")"
-
   tarball="$(cd "${tmp_dir}" && npm pack --silent --registry "${NPM_REGISTRY}" "${binding_pkg}@${version}" | tail -n1)"
   [[ -n "${tarball}" && -f "${tmp_dir}/${tarball}" ]] || die "Failed to download ${binding_pkg}@${version}"
 
@@ -313,10 +306,52 @@ inject_oxc_binding() {
   tar -xzf "${tmp_dir}/${tarball}" -C "${tmp_dir}/extract"
   [[ -d "${tmp_dir}/extract/package" ]] || die "Invalid package archive for ${binding_pkg}"
 
+  rm -rf "${payload_dir}"
+  mkdir -p "${payload_dir}"
+  cp -a "${tmp_dir}/extract/package/." "${payload_dir}/"
+  rm -rf "${tmp_dir}"
+  echo "${payload_dir}"
+}
+
+inject_oxc_binding_to_target() {
+  local binding_pkg="$1"
+  local version="$2"
+  local target_dir="$3"
+  local current_version=""
+
+  if [[ -f "${target_dir}/package.json" ]]; then
+    current_version="$(node -e "const fs=require('fs');const p='${target_dir}/package.json';try{const j=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(String(j.version||''))}catch{}" 2>/dev/null || true)"
+  fi
+  if [[ "${current_version}" == "${version}" ]]; then
+    return 0
+  fi
+
+  local payload_dir
+  payload_dir="$(get_binding_payload_dir "${binding_pkg}" "${version}")"
+  log "Injecting missing oxc binding: ${binding_pkg}@${version} -> ${target_dir}"
   rm -rf "${target_dir}"
   mkdir -p "${target_dir}"
-  cp -a "${tmp_dir}/extract/package/." "${target_dir}/"
-  rm -rf "${tmp_dir}"
+  cp -a "${payload_dir}/." "${target_dir}/"
+}
+
+inject_oxc_binding_for_core_version() {
+  local core_pkg="$1"
+  local version="$2"
+  local binding_pkg="$3"
+  local injected=0
+  local base target_dir
+
+  while IFS= read -r base; do
+    [[ -n "${base}" ]] || continue
+    target_dir="${base}/node_modules/${binding_pkg}"
+    inject_oxc_binding_to_target "${binding_pkg}" "${version}" "${target_dir}"
+    injected=1
+  done < <(find node_modules/.pnpm -maxdepth 1 -type d -name "${core_pkg}@${version}*" 2>/dev/null || true)
+
+  if [[ "${injected}" -eq 0 ]]; then
+    target_dir="node_modules/${binding_pkg}"
+    inject_oxc_binding_to_target "${binding_pkg}" "${version}" "${target_dir}"
+  fi
 }
 
 ensure_oxc_native_bindings() {
@@ -336,15 +371,14 @@ ensure_oxc_native_bindings() {
   [[ -f /etc/alpine-release ]] && libc="musl"
 
   local cores=("parser" "minify" "transform")
-  local core core_pkg version binding_pkg
+  local core core_pkg binding_pkg version
   for core in "${cores[@]}"; do
     core_pkg="oxc-${core}"
-    version="$(get_oxc_core_version "${core_pkg}" "${log_file}")"
-    if [[ -z "${version}" ]]; then
-      continue
-    fi
     binding_pkg="@oxc-${core}/binding-linux-${arch}-${libc}"
-    inject_oxc_binding "${binding_pkg}" "${version}"
+    while IFS= read -r version; do
+      [[ -n "${version}" ]] || continue
+      inject_oxc_binding_for_core_version "${core_pkg}" "${version}" "${binding_pkg}"
+    done < <(get_oxc_core_versions "${core_pkg}" "${log_file}")
   done
 }
 
@@ -358,16 +392,19 @@ verify_oxc_bindings() {
   libc="gnu"
   [[ -f /etc/alpine-release ]] && libc="musl"
 
-  local pkgs=(
-    "@oxc-parser/binding-linux-${arch}-${libc}"
-    "@oxc-minify/binding-linux-${arch}-${libc}"
-    "@oxc-transform/binding-linux-${arch}-${libc}"
-  )
-  local pkg
-  for pkg in "${pkgs[@]}"; do
-    if ! node -e "require.resolve('${pkg}')" >/dev/null 2>&1; then
-      return 1
-    fi
+  local cores=("parser" "minify" "transform")
+  local core core_pkg binding_pkg version base target_dir
+  for core in "${cores[@]}"; do
+    core_pkg="oxc-${core}"
+    binding_pkg="@oxc-${core}/binding-linux-${arch}-${libc}"
+    while IFS= read -r version; do
+      [[ -n "${version}" ]] || continue
+      while IFS= read -r base; do
+        [[ -n "${base}" ]] || continue
+        target_dir="${base}/node_modules/${binding_pkg}"
+        [[ -f "${target_dir}/package.json" ]] || return 1
+      done < <(find node_modules/.pnpm -maxdepth 1 -type d -name "${core_pkg}@${version}*" 2>/dev/null || true)
+    done < <(get_oxc_core_versions "${core_pkg}")
   done
   return 0
 }
