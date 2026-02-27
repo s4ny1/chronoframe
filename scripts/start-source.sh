@@ -10,14 +10,12 @@ ACTION="${1:-start}"
 APP_PORT="${APP_PORT:-58081}"
 APP_HOST="${APP_HOST:-0.0.0.0}"
 DATABASE_URL="${DATABASE_URL:-./data/app.sqlite3}"
-UPDATE_ON_START="${UPDATE_ON_START:-1}"
 NODE_ENV_VALUE="${NODE_ENV_VALUE:-production}"
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
 PNPM_REGISTRY="${PNPM_REGISTRY:-https://registry.npmmirror.com}"
 NODE_MIN_MAJOR="${NODE_MIN_MAJOR:-18}"
 PNPM_PREPARE_VERSION="${PNPM_PREPARE_VERSION:-pnpm@10.18.3}"
 NODE_OPTIONS_VALUE="${NODE_OPTIONS_VALUE:---max-old-space-size=4096}"
-REPO_UPDATED=0
 
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
 RUN_DIR="${RUN_DIR:-${PROJECT_ROOT}/run}"
@@ -52,8 +50,8 @@ Usage:
   bash scripts/start-source.sh [install|start|status|restart|stop|update]
 
 Actions:
-  install   Install system dependencies only (apt/dnf/yum)
-  start     Start app in background (auto update/build/migrate when needed)
+  install   Install system deps + project deps + build + migrate
+  start     Start app in background only
   status    Show app status by PID file
   restart   Restart app
   stop      Stop app
@@ -63,7 +61,6 @@ Environment (optional):
   APP_PORT=58081
   APP_HOST=0.0.0.0
   DATABASE_URL=./data/app.sqlite3
-  UPDATE_ON_START=1
   NPM_REGISTRY=https://registry.npmmirror.com
   PNPM_REGISTRY=https://registry.npmmirror.com
 EOF
@@ -162,7 +159,6 @@ ensure_pnpm() {
 }
 
 update_repo() {
-  REPO_UPDATED=0
   if ! command -v git >/dev/null 2>&1; then
     log "git not found, skip update."
     return 0
@@ -176,24 +172,16 @@ update_repo() {
     return 0
   fi
 
-  local upstream before after
+  local upstream
   upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
   if [[ -z "${upstream}" ]]; then
     log "No upstream branch configured, skip git pull."
     return 0
   fi
 
-  before="$(git rev-parse HEAD 2>/dev/null || echo '')"
   log "Updating source code (git pull --ff-only)..."
   git fetch --all --prune
   git pull --ff-only
-  after="$(git rev-parse HEAD 2>/dev/null || echo '')"
-  if [[ -n "${before}" && -n "${after}" && "${before}" != "${after}" ]]; then
-    REPO_UPDATED=1
-    log "Repository updated: ${before:0:7} -> ${after:0:7}"
-  else
-    log "Repository already up to date."
-  fi
 }
 
 install_project_deps() {
@@ -260,6 +248,11 @@ build_project() {
 run_migration() {
   log "Running database migration..."
   DATABASE_URL="${DATABASE_URL}" node scripts/migrate.mjs
+}
+
+ensure_runtime_artifacts() {
+  [[ -d node_modules ]] || die "node_modules not found. Run: bash scripts/start-source.sh install"
+  [[ -f .output/server/index.mjs ]] || die "Build output missing. Run: bash scripts/start-source.sh install"
 }
 
 is_running() {
@@ -333,30 +326,9 @@ status_app() {
   fi
 }
 
-prepare_runtime_if_needed() {
-  local need_build=0
-  if [[ ! -d node_modules || ! -f .output/server/index.mjs ]]; then
-    need_build=1
-  fi
-  if [[ "${REPO_UPDATED}" == "1" ]]; then
-    need_build=1
-  fi
-
-  if [[ "${need_build}" == "1" ]]; then
-    setup_registry_mirror
-    ensure_pnpm
-    install_project_deps
-    build_project
-  fi
-}
-
 start_flow() {
   validate_node
-  if [[ "${UPDATE_ON_START}" == "1" ]]; then
-    update_repo
-  fi
-  prepare_runtime_if_needed
-  run_migration
+  ensure_runtime_artifacts
   start_app
 }
 
@@ -365,7 +337,10 @@ install_flow() {
   validate_node
   setup_registry_mirror
   ensure_pnpm
-  log "System dependency installation completed."
+  install_project_deps
+  build_project
+  run_migration
+  log "Install completed: system deps + project deps + build + migrate."
 }
 
 case "${ACTION}" in
