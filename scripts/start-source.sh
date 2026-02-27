@@ -137,9 +137,10 @@ validate_node() {
 setup_registry_mirror() {
   log "Configuring npm/pnpm registry mirrors..."
   npm config set registry "${NPM_REGISTRY}" >/dev/null
-  npm config set optional true >/dev/null || true
+  npm config delete optional >/dev/null 2>&1 || true
+  npm config delete omit >/dev/null 2>&1 || true
   export NPM_CONFIG_REGISTRY="${NPM_REGISTRY}"
-  export NPM_CONFIG_OPTIONAL=true
+  unset NPM_CONFIG_OMIT npm_config_omit || true
 }
 
 ensure_pnpm() {
@@ -155,7 +156,7 @@ ensure_pnpm() {
 
   command -v pnpm >/dev/null 2>&1 || die "pnpm installation failed."
   pnpm config set registry "${PNPM_REGISTRY}" >/dev/null
-  pnpm config set optional true >/dev/null || true
+  pnpm config delete optional >/dev/null 2>&1 || true
   log "pnpm version: $(pnpm -v)"
 }
 
