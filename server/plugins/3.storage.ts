@@ -37,11 +37,18 @@ export default nitroPlugin(async (nitroApp) => {
   }
   
   if (!activeProvider) {
-    logger.storage.error('No active storage provider configured.')
+    logger.storage.error(
+      'No active storage provider configured. '
+      + 'Complete the onboarding wizard or verify that NUXT_STORAGE_PROVIDER and '
+      + 'the corresponding NUXT_PROVIDER_* environment variables are set, then restart the server.',
+    )
     return
   }
 
   const storageConfiguration = activeProvider.config
+  logger.storage.info(
+    `Initializing storage provider: ${activeProvider.provider} (id=${activeProvider.id}, name="${activeProvider.name}")`,
+  )
 
   let storageManager: StorageManager
   try {
@@ -51,7 +58,8 @@ export default nitroPlugin(async (nitroApp) => {
     )
   } catch (err) {
     logger.storage.error(
-      'Failed to initialize storage provider. Please check your storage configuration.',
+      `Failed to initialize storage provider "${activeProvider.name}" (${activeProvider.provider}). `
+      + 'Please check your storage configuration in Settings or environment variables.',
       err,
     )
     return
