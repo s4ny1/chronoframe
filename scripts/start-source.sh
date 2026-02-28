@@ -5,6 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
+ENV_FILE="${ENV_FILE:-${PROJECT_ROOT}/.env}"
+if [[ -f "${ENV_FILE}" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "${ENV_FILE}"
+  set +a
+fi
+
 ACTION="${1:-start}"
 
 APP_PORT="${APP_PORT:-58081}"
@@ -23,6 +31,8 @@ AUTO_SWAP_FOR_BUILD="${AUTO_SWAP_FOR_BUILD:-1}"
 BUILD_MIN_MEMORY_MB="${BUILD_MIN_MEMORY_MB:-4096}"
 BUILD_SWAP_FILE="${BUILD_SWAP_FILE:-/swapfile-chronoframe}"
 BUILD_SWAP_MB="${BUILD_SWAP_MB:-2048}"
+SESSION_PASSWORD_FILE="${SESSION_PASSWORD_FILE:-${PROJECT_ROOT}/data/session-password}"
+SESSION_PASSWORD_MIN_LEN="${SESSION_PASSWORD_MIN_LEN:-32}"
 
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
 RUN_DIR="${RUN_DIR:-${PROJECT_ROOT}/run}"
@@ -36,6 +46,34 @@ log() {
 die() {
   echo "[start-source] ERROR: $*" >&2
   exit 1
+}
+
+ensure_session_password() {
+  if [[ -z "${NUXT_SESSION_PASSWORD:-}" && -f "${SESSION_PASSWORD_FILE}" ]]; then
+    NUXT_SESSION_PASSWORD="$(tr -d '\r\n' < "${SESSION_PASSWORD_FILE}" || true)"
+    export NUXT_SESSION_PASSWORD
+  fi
+
+  if [[ -z "${NUXT_SESSION_PASSWORD:-}" ]]; then
+    local generated
+    if command -v openssl >/dev/null 2>&1; then
+      generated="$(openssl rand -hex 32)"
+    else
+      generated="$(node -e "const crypto=require('crypto');console.log(crypto.randomBytes(32).toString('hex'))")"
+    fi
+    NUXT_SESSION_PASSWORD="${generated}"
+    export NUXT_SESSION_PASSWORD
+
+    mkdir -p "$(dirname "${SESSION_PASSWORD_FILE}")"
+    umask 077
+    printf '%s\n' "${NUXT_SESSION_PASSWORD}" > "${SESSION_PASSWORD_FILE}"
+    chmod 600 "${SESSION_PASSWORD_FILE}" || true
+    log "NUXT_SESSION_PASSWORD not found. Generated and saved to ${SESSION_PASSWORD_FILE}"
+  fi
+
+  if (( ${#NUXT_SESSION_PASSWORD} < SESSION_PASSWORD_MIN_LEN )); then
+    die "NUXT_SESSION_PASSWORD is too short (${#NUXT_SESSION_PASSWORD}). Require at least ${SESSION_PASSWORD_MIN_LEN} characters."
+  fi
 }
 
 resolve_node_options() {
@@ -144,6 +182,8 @@ Environment (optional):
   APP_PORT=58081
   APP_HOST=0.0.0.0
   DATABASE_URL=./data/app.sqlite3
+  NUXT_SESSION_PASSWORD=<at least 32 chars>
+  SESSION_PASSWORD_FILE=./data/session-password
   NPM_REGISTRY=https://registry.npmmirror.com
   PNPM_REGISTRY=https://registry.npmmirror.com
   NODE_INSTALL_VERSION=22.12.0
@@ -549,6 +589,7 @@ start_app() {
     NITRO_HOST="${APP_HOST}" \
     NITRO_PORT="${APP_PORT}" \
     DATABASE_URL="${DATABASE_URL}" \
+    NUXT_SESSION_PASSWORD="${NUXT_SESSION_PASSWORD}" \
     node .output/server/index.mjs >> "${LOG_FILE}" 2>&1 &
 
   local pid=$!
@@ -600,6 +641,7 @@ status_app() {
 start_flow() {
   setup_noninteractive_env
   validate_node
+  ensure_session_password
   ensure_runtime_artifacts
   start_app
 }
