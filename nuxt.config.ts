@@ -257,9 +257,6 @@ export default defineNuxtConfig({
   },
 
   i18n: {
-    experimental: {
-      localeDetector: 'localeDetector.ts',
-    },
     detectBrowserLanguage: {
       fallbackLocale: 'en',
       useCookie: false,

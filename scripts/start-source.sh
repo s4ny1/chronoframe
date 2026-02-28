@@ -14,9 +14,15 @@ NODE_ENV_VALUE="${NODE_ENV_VALUE:-production}"
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
 PNPM_REGISTRY="${PNPM_REGISTRY:-https://registry.npmmirror.com}"
 PNPM_PREPARE_VERSION="${PNPM_PREPARE_VERSION:-pnpm@10.18.3}"
-NODE_OPTIONS_VALUE="${NODE_OPTIONS_VALUE:---max-old-space-size=4096}"
+NODE_OPTIONS_VALUE="${NODE_OPTIONS_VALUE:-}"
 NODE_INSTALL_VERSION="${NODE_INSTALL_VERSION:-22.12.0}"
 NODE_MIRROR="${NODE_MIRROR:-https://npmmirror.com/mirrors/node}"
+CI_MODE="${CI_MODE:-1}"
+NUXT_TELEMETRY_DISABLED_VALUE="${NUXT_TELEMETRY_DISABLED_VALUE:-1}"
+AUTO_SWAP_FOR_BUILD="${AUTO_SWAP_FOR_BUILD:-1}"
+BUILD_MIN_MEMORY_MB="${BUILD_MIN_MEMORY_MB:-4096}"
+BUILD_SWAP_FILE="${BUILD_SWAP_FILE:-/swapfile-chronoframe}"
+BUILD_SWAP_MB="${BUILD_SWAP_MB:-2048}"
 
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT}/logs}"
 RUN_DIR="${RUN_DIR:-${PROJECT_ROOT}/run}"
@@ -30,6 +36,82 @@ log() {
 die() {
   echo "[start-source] ERROR: $*" >&2
   exit 1
+}
+
+resolve_node_options() {
+  if [[ -n "${NODE_OPTIONS_VALUE}" ]]; then
+    log "Using NODE_OPTIONS: ${NODE_OPTIONS_VALUE}"
+    return 0
+  fi
+
+  local mem_total_mb=4096
+  if [[ -r /proc/meminfo ]]; then
+    mem_total_mb="$(( $(awk '/^MemTotal:/{print $2}' /proc/meminfo) / 1024 ))"
+  fi
+
+  local heap_mb
+  heap_mb="$(( mem_total_mb * 70 / 100 ))"
+  if (( heap_mb < 1024 )); then
+    heap_mb=1024
+  fi
+  if (( heap_mb > 8192 )); then
+    heap_mb=8192
+  fi
+  NODE_OPTIONS_VALUE="--max-old-space-size=${heap_mb}"
+  log "Auto NODE_OPTIONS: ${NODE_OPTIONS_VALUE} (MemTotal=${mem_total_mb}MB)"
+}
+
+setup_noninteractive_env() {
+  export CI="${CI_MODE}"
+  export NUXT_TELEMETRY_DISABLED="${NUXT_TELEMETRY_DISABLED_VALUE}"
+}
+
+ensure_build_swap() {
+  [[ "${AUTO_SWAP_FOR_BUILD}" == "1" ]] || return 0
+  command -v swapon >/dev/null 2>&1 || return 0
+  command -v mkswap >/dev/null 2>&1 || return 0
+  [[ -r /proc/meminfo ]] || return 0
+
+  local mem_mb swap_mb total_mb
+  mem_mb="$(( $(awk '/^MemTotal:/{print $2}' /proc/meminfo) / 1024 ))"
+  swap_mb="$(( $(awk '/^SwapTotal:/{print $2}' /proc/meminfo) / 1024 ))"
+  total_mb="$(( mem_mb + swap_mb ))"
+
+  if (( total_mb >= BUILD_MIN_MEMORY_MB )); then
+    log "Build memory check OK: RAM ${mem_mb}MB + SWAP ${swap_mb}MB"
+    return 0
+  fi
+
+  if swapon --show=NAME --noheadings 2>/dev/null | tr -d ' ' | grep -qx "${BUILD_SWAP_FILE}"; then
+    log "Build swap already enabled: ${BUILD_SWAP_FILE}"
+    return 0
+  fi
+
+  local need_mb target_swap_mb avail_mb
+  need_mb="$(( BUILD_MIN_MEMORY_MB - total_mb ))"
+  target_swap_mb="${BUILD_SWAP_MB}"
+  if (( target_swap_mb < need_mb )); then
+    target_swap_mb="${need_mb}"
+  fi
+
+  avail_mb="$(df -Pm "$(dirname "${BUILD_SWAP_FILE}")" | awk 'NR==2{print $4}')"
+  if [[ -z "${avail_mb}" || "${avail_mb}" -le $(( target_swap_mb + 256 )) ]]; then
+    log "Skip auto swap: insufficient free disk for ${target_swap_mb}MB at $(dirname "${BUILD_SWAP_FILE}")"
+    return 0
+  fi
+
+  log "Memory low for build (RAM ${mem_mb}MB + SWAP ${swap_mb}MB), creating swap ${target_swap_mb}MB at ${BUILD_SWAP_FILE}"
+  run_root swapoff "${BUILD_SWAP_FILE}" >/dev/null 2>&1 || true
+  run_root rm -f "${BUILD_SWAP_FILE}"
+  if command -v fallocate >/dev/null 2>&1; then
+    run_root fallocate -l "${target_swap_mb}M" "${BUILD_SWAP_FILE}"
+  else
+    run_root dd if=/dev/zero of="${BUILD_SWAP_FILE}" bs=1M count="${target_swap_mb}" status=none
+  fi
+  run_root chmod 600 "${BUILD_SWAP_FILE}"
+  run_root mkswap "${BUILD_SWAP_FILE}" >/dev/null
+  run_root swapon "${BUILD_SWAP_FILE}"
+  log "Auto swap enabled."
 }
 
 SUDO=""
@@ -176,6 +258,7 @@ ensure_supported_node_runtime() {
 
 setup_registry_mirror() {
   log "Configuring npm/pnpm registry mirrors..."
+  setup_noninteractive_env
   npm config set registry "${NPM_REGISTRY}" >/dev/null
   npm config delete optional >/dev/null 2>&1 || true
   npm config delete omit >/dev/null 2>&1 || true
@@ -224,10 +307,12 @@ update_repo() {
 
 install_project_deps() {
   log "Installing project dependencies..."
+  resolve_node_options
+  setup_noninteractive_env
   local install_log
   install_log="$(mktemp "${TMPDIR:-/tmp}/chronoframe-pnpm-install.XXXXXX.log")"
 
-  if pnpm install --frozen-lockfile 2>&1 | tee "${install_log}"; then
+  if NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm install --frozen-lockfile 2>&1 | tee "${install_log}"; then
     rm -f "${install_log}"
     return 0
   fi
@@ -235,15 +320,15 @@ install_project_deps() {
   if grep -qiE 'Cannot find native binding|@oxc-(parser|minify|transform)/binding-linux|\.linux-.*\.node' "${install_log}"; then
     log "Detected oxc native binding issue, running recovery install..."
     rm -rf node_modules
-    if ! pnpm install --frozen-lockfile --ignore-scripts; then
-      pnpm install --ignore-scripts
+    if ! NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm install --frozen-lockfile --ignore-scripts; then
+      NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm install --ignore-scripts
     fi
     ensure_oxc_native_bindings "${install_log}"
 
     local prepare_log prepared_ok=0 attempt
     prepare_log="$(mktemp "${TMPDIR:-/tmp}/chronoframe-nuxt-prepare.XXXXXX.log")"
     for attempt in 1 2 3; do
-      if pnpm exec nuxt prepare 2>&1 | tee "${prepare_log}"; then
+      if NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm exec nuxt prepare 2>&1 | tee "${prepare_log}"; then
         prepared_ok=1
         break
       fi
@@ -258,7 +343,7 @@ install_project_deps() {
     [[ "${prepared_ok}" -eq 1 ]] || die "nuxt prepare failed after oxc binding recovery."
   else
     log "Frozen lockfile install failed, retrying with normal install..."
-    pnpm install
+    NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm install
   fi
 
   rm -f "${install_log}"
@@ -420,8 +505,11 @@ ensure_oxc_bindings_before_build() {
 }
 
 build_project() {
+  resolve_node_options
+  setup_noninteractive_env
+  ensure_build_swap
   ensure_oxc_bindings_before_build
-  log "Building project..."
+  log "Building project with NODE_OPTIONS=${NODE_OPTIONS_VALUE}..."
   NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm run build:deps
   NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm run build
 }
@@ -508,16 +596,20 @@ status_app() {
 }
 
 start_flow() {
+  setup_noninteractive_env
   validate_node
   ensure_runtime_artifacts
   start_app
 }
 
 install_flow() {
+  setup_noninteractive_env
   install_system_deps
   ensure_supported_node_runtime
+  resolve_node_options
   setup_registry_mirror
   ensure_pnpm
+  ensure_build_swap
   install_project_deps
   build_project
   run_migration
