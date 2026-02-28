@@ -509,6 +509,8 @@ build_project() {
   setup_noninteractive_env
   ensure_build_swap
   ensure_oxc_bindings_before_build
+  log "Cleaning previous build artifacts..."
+  rm -rf .nuxt .output
   log "Building project with NODE_OPTIONS=${NODE_OPTIONS_VALUE}..."
   NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm run build:deps
   NODE_OPTIONS="${NODE_OPTIONS_VALUE}" pnpm run build

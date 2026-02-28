@@ -254,9 +254,13 @@ export default defineNuxtConfig({
       'isBetween',
     ],
     defaultTimezone: 'Asia/Shanghai',
-  },
-
-  i18n: {
+  },  i18n: {
+    experimental: {
+      // Explicitly disable server-side locale detector integration.
+      localeDetector: '',
+      // Disable i18n route cache wrapper because its bypass callback can run before i18n context exists.
+      cacheLifetime: -1,
+    },
     detectBrowserLanguage: {
       fallbackLocale: 'en',
       useCookie: false,
@@ -264,27 +268,14 @@ export default defineNuxtConfig({
     },
     strategy: 'no_prefix',
     defaultLocale: 'en',
+    // Keep locales metadata only. Messages are loaded from i18n/i18n.config.ts
+    // to avoid SSR runtime fetching /_i18n/* from localhost.
     locales: [
-      {
-        code: 'zh-Hans',
-        name: '简体中文',
-        file: 'zh-Hans.json',
-        language: 'zh',
-      },
-      {
-        code: 'zh-Hant-TW',
-        name: '繁体中文(台湾)',
-        file: 'zh-Hant-TW.json',
-        language: 'zh-TW',
-      },
-      {
-        code: 'zh-Hant-HK',
-        name: '繁体中文(香港)',
-        file: 'zh-Hant-HK.json',
-        language: 'zh-HK',
-      },
-      { code: 'en', name: 'English', file: 'en.json', language: 'en' },
-      { code: 'ja', name: '日本語', file: 'ja.json', language: 'ja' },
+      { code: 'zh-Hans', name: 'Chinese Simplified', language: 'zh' },
+      { code: 'zh-Hant-TW', name: 'Chinese Traditional (TW)', language: 'zh-TW' },
+      { code: 'zh-Hant-HK', name: 'Chinese Traditional (HK)', language: 'zh-HK' },
+      { code: 'en', name: 'English', language: 'en' },
+      { code: 'ja', name: 'Japanese', language: 'ja' },
     ],
   },
 })
