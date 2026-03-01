@@ -40,6 +40,14 @@ const PROVIDER_ICON = {
   openlist: 'tabler:cloud',
 }
 
+const PROVIDER_LABEL = {
+  s3: 'AWS S3 Compatible',
+  local: 'Local Storage',
+  baidu: 'Baidu Netdisk',
+  alist: 'AList',
+  openlist: 'OpenList',
+}
+
 const availableStorageColumns: TableColumn<SettingStorageProvider>[] = [
   {
     accessorKey: 'status',
@@ -88,6 +96,17 @@ const availableStorageColumns: TableColumn<SettingStorageProvider>[] = [
               { default: () => 'Test Connection' },
             )
           : null,
+        h(
+          UButton,
+          {
+            size: 'sm',
+            variant: 'soft',
+            color: 'neutral',
+            icon: 'tabler:edit',
+            onClick: () => onStorageEdit(row),
+          },
+          { default: () => 'Edit' },
+        ),
         h(
           UButton,
           {
@@ -158,9 +177,25 @@ const storageConfigState = reactive<{
   } as any,
 })
 
-// Select schema based on provider.
-const currentStorageSchema = computed(() => {
-  const provider = storageConfigState.provider
+const isEditStorageSlideoverOpen = ref(false)
+
+const editStorageConfigState = reactive<{
+  id: number | null
+  name: string
+  provider: string
+  config: Partial<StorageConfig>
+}>({
+  id: null,
+  name: '',
+  provider: 's3',
+  config: {
+    provider: 's3',
+    region: 'auto',
+    prefix: '/photos',
+  } as any,
+})
+
+const getStorageSchema = (provider: string) => {
   switch (provider) {
     case 'local':
       return localStorageConfigSchema
@@ -174,7 +209,16 @@ const currentStorageSchema = computed(() => {
     default:
       return s3StorageConfigSchema
   }
-})
+}
+
+// Select schema based on provider.
+const currentStorageSchema = computed(() =>
+  getStorageSchema(storageConfigState.provider),
+)
+
+const currentEditStorageSchema = computed(() =>
+  getStorageSchema(editStorageConfigState.provider),
+)
 
 // Default storage config by provider.
 const getStorageConfigDefaults = (provider: string): Partial<StorageConfig> => {
@@ -202,6 +246,15 @@ const getStorageConfigDefaults = (provider: string): Partial<StorageConfig> => {
         metaEndpoint: '/api/fs/get',
         pathField: 'path',
       } as any
+    case 'openlist':
+      return {
+        provider: 'openlist',
+        uploadEndpoint: '/api/fs/put',
+        listEndpoint: '/api/fs/list',
+        deleteEndpoint: '/api/fs/remove',
+        metaEndpoint: '/api/fs/get',
+        pathField: 'path',
+      } as any
     case 's3':
     default:
       return {
@@ -212,10 +265,8 @@ const getStorageConfigDefaults = (provider: string): Partial<StorageConfig> => {
   }
 }
 
-// Build fields-config dynamically (with i18n keys).
-const storageFieldsConfig = computed<Record<string, any>>(() => {
-  const provider = storageConfigState.provider
-  const baseKey = provider === 'alist'
+const getStorageFieldsConfig = (provider: string): Record<string, any> => {
+  const baseKey = provider === 'alist' || provider === 'openlist'
     ? 'settings.storage.openlist'
     : `settings.storage.${provider}`
 
@@ -261,6 +312,7 @@ const storageFieldsConfig = computed<Record<string, any>>(() => {
         },
       }
     case 'alist':
+    case 'openlist':
       return {
         provider: { hidden: true },
         baseUrl: {
@@ -362,7 +414,16 @@ const storageFieldsConfig = computed<Record<string, any>>(() => {
         },
       }
   }
-})
+}
+
+// Build fields-config dynamically (with i18n keys).
+const storageFieldsConfig = computed<Record<string, any>>(() =>
+  getStorageFieldsConfig(storageConfigState.provider),
+)
+
+const editStorageFieldsConfig = computed<Record<string, any>>(() =>
+  getStorageFieldsConfig(editStorageConfigState.provider),
+)
 
 const onStorageConfigSubmit = async (
   event: { data: Partial<StorageConfig> },
@@ -392,6 +453,55 @@ const onStorageConfigSubmit = async (
   } catch (error) {
     toast.add({
       title: 'Failed to create storage configuration',
+      description: (error as Error).message,
+      color: 'error',
+    })
+  }
+}
+
+const onStorageEdit = (storage: SettingStorageProvider) => {
+  const provider = storage.provider
+  editStorageConfigState.id = storage.id
+  editStorageConfigState.name = storage.name
+  editStorageConfigState.provider = provider
+  editStorageConfigState.config = {
+    ...getStorageConfigDefaults(provider),
+    ...(storage.config as Partial<StorageConfig>),
+    provider: provider as any,
+  }
+  isEditStorageSlideoverOpen.value = true
+}
+
+const onStorageEditSubmit = async (
+  event: { data: Partial<StorageConfig> },
+  close?: () => void,
+) => {
+  if (!editStorageConfigState.id) return
+
+  const storageId = editStorageConfigState.id
+  try {
+    const payload = {
+      name: editStorageConfigState.name,
+      provider: editStorageConfigState.provider,
+      config: event.data,
+    }
+
+    await $fetch(`/api/system/settings/storage-config/${storageId}`, {
+      method: 'PUT',
+      body: payload,
+    })
+
+    await refreshAvailableStorage()
+    await refreshCurrentStorageProvider()
+    toast.add({
+      title: 'Storage configuration updated',
+      color: 'success',
+    })
+    close?.()
+    isEditStorageSlideoverOpen.value = false
+  } catch (error) {
+    toast.add({
+      title: 'Failed to update storage configuration',
       description: (error as Error).message,
       color: 'error',
     })
@@ -539,7 +649,7 @@ const onStorageDelete = async (storageId: number) => {
           <template #header>
             <div class="w-full flex items-center justify-between">
               <span>Storage Profile Management</span>
-              <div>
+              <div class="flex items-center gap-2">
                 <USlideover
                   title="Create Storage Profile"
                   :ui="{ footer: 'justify-end' }"
@@ -619,6 +729,69 @@ const onStorageDelete = async (storageId: number) => {
                       icon="tabler:check"
                       type="submit"
                       form="createStorageForm"
+                    />
+                  </template>
+                </USlideover>
+
+                <USlideover
+                  v-model:open="isEditStorageSlideoverOpen"
+                  title="Edit Storage Profile"
+                  :ui="{ footer: 'justify-end' }"
+                >
+                  <template #body="{ close }">
+                    <div class="space-y-4">
+                      <UFormField
+                        label="Storage Type"
+                        class="w-full"
+                        :ui="{
+                          container: 'sm:max-w-full',
+                        }"
+                      >
+                        <UInput
+                          :model-value="
+                            PROVIDER_LABEL[
+                              editStorageConfigState.provider as keyof typeof PROVIDER_LABEL
+                            ] || editStorageConfigState.provider
+                          "
+                          disabled
+                        />
+                      </UFormField>
+
+                      <UFormField
+                        label="Storage Name"
+                        required
+                        :ui="{
+                          container: 'sm:max-w-full',
+                        }"
+                      >
+                        <UInput v-model="editStorageConfigState.name" />
+                      </UFormField>
+
+                      <USeparator />
+
+                      <AutoForm
+                        id="editStorageForm"
+                        :schema="currentEditStorageSchema"
+                        :state="editStorageConfigState.config"
+                        :fields-config="editStorageFieldsConfig"
+                        @submit="onStorageEditSubmit($event, close)"
+                      />
+                    </div>
+                  </template>
+
+                  <template #footer="{ close }">
+                    <UButton
+                      label="Cancel"
+                      color="neutral"
+                      variant="outline"
+                      @click="close"
+                    />
+                    <UButton
+                      label="Update Storage"
+                      variant="soft"
+                      icon="tabler:check"
+                      type="submit"
+                      form="editStorageForm"
                     />
                   </template>
                 </USlideover>
