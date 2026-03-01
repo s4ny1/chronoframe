@@ -218,7 +218,26 @@ export const preprocessImageWithJpegUpload = async (
   if (!storageProvider) return null
 
   try {
-    const rawImageBuffer = await storageProvider.get(s3key)
+    const rawImageBuffer = await withRetry(
+      async () => {
+        const buffer = await storageProvider.get(s3key)
+        if (!buffer) {
+          throw new Error(`Image not visible in storage yet: ${s3key}`)
+        }
+        return buffer
+      },
+      {
+        maxAttempts: 6,
+        baseDelay: 1000,
+        maxDelay: 8000,
+        timeout: 15000,
+        delayStrategy: 'exponential',
+        retryCondition: (error) =>
+          error.message.includes('not visible in storage yet')
+          || RetryConditions.networkErrors(error),
+      },
+      logger.image,
+    )
     if (!rawImageBuffer) {
       logger.image.error(`Image not found in storage: ${s3key}`)
       return null
@@ -276,7 +295,26 @@ export const preprocessImage = async (
   if (!storageProvider) return null
 
   try {
-    const rawImageBuffer = await storageProvider.get(s3key)
+    const rawImageBuffer = await withRetry(
+      async () => {
+        const buffer = await storageProvider.get(s3key)
+        if (!buffer) {
+          throw new Error(`Image not visible in storage yet: ${s3key}`)
+        }
+        return buffer
+      },
+      {
+        maxAttempts: 6,
+        baseDelay: 1000,
+        maxDelay: 8000,
+        timeout: 15000,
+        delayStrategy: 'exponential',
+        retryCondition: (error) =>
+          error.message.includes('not visible in storage yet')
+          || RetryConditions.networkErrors(error),
+      },
+      logger.image,
+    )
     if (!rawImageBuffer) {
       logger.image.error(`Image not found in storage: ${s3key}`)
       return null

@@ -20,6 +20,7 @@ import {
 import { findLivePhotoVideoForImage } from '../video/livephoto'
 import { processMotionPhotoFromXmp } from '../video/motion-photo'
 import { getStorageManager } from '~~/server/plugins/3.storage'
+import type { StorageObject, StorageProvider } from '../storage/interfaces'
 
 export class QueueManager {
   private static instances: Map<string, QueueManager> = new Map()
@@ -30,6 +31,8 @@ export class QueueManager {
   private processedCount: number = 0
   private errorCount: number = 0
   private startTime: Date
+  private readonly storageVisibleMaxAttempts = 6
+  private readonly storageVisibleBaseDelayMs = 1000
 
   static getInstance(
     workerId: string = 'default',
@@ -71,6 +74,53 @@ export class QueueManager {
             100
           : 0,
     }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  private async waitForStorageObject(
+    storageProvider: StorageProvider,
+    storageKey: string,
+    taskId: number,
+  ): Promise<StorageObject | null> {
+    for (let attempt = 1; attempt <= this.storageVisibleMaxAttempts; attempt++) {
+      let storageObject = await storageProvider.getFileMeta(storageKey)
+      if (!storageObject) {
+        // Fallback: direct read to verify existence for providers with delayed metadata visibility.
+        const maybeBuffer = await storageProvider.get(storageKey)
+        if (maybeBuffer) {
+          storageObject = {
+            key: storageKey,
+            size: maybeBuffer.length,
+            lastModified: new Date(),
+          }
+        }
+      }
+
+      if (storageObject) {
+        if (attempt > 1) {
+          this.logger.info(
+            `[${taskId}] Storage object became visible on attempt ${attempt}/${this.storageVisibleMaxAttempts}: ${storageKey}`,
+          )
+        }
+        return storageObject
+      }
+
+      if (attempt < this.storageVisibleMaxAttempts) {
+        const delay = Math.min(
+          this.storageVisibleBaseDelayMs * Math.pow(2, attempt - 1),
+          8000,
+        )
+        this.logger.warn(
+          `[${taskId}] Storage object not visible yet (attempt ${attempt}/${this.storageVisibleMaxAttempts}), retrying in ${delay}ms: ${storageKey}`,
+        )
+        await this.sleep(delay)
+      }
+    }
+
+    return null
   }
 
   /**
@@ -242,18 +292,11 @@ export class QueueManager {
         try {
           this.logger.info(`Start processing task ${taskId}: ${storageKey}`)
 
-          let storageObject = await storageProvider.getFileMeta(storageKey)
-          if (!storageObject) {
-            // Fallback: try read the file directly to confirm existence (e.g., local provider)
-            const maybeBuffer = await storageProvider.get(storageKey)
-            if (maybeBuffer) {
-              storageObject = {
-                key: storageKey,
-                size: maybeBuffer.length,
-                lastModified: new Date(),
-              }
-            }
-          }
+          const storageObject = await this.waitForStorageObject(
+            storageProvider,
+            storageKey,
+            taskId,
+          )
           if (!storageObject) {
             throw new Error(`Storage object not found`)
           }
@@ -549,17 +592,11 @@ export class QueueManager {
             `Start processing LivePhoto detection task ${taskId}: ${videoKey}`,
           )
 
-          let storageObject = await storageProvider.getFileMeta(videoKey)
-          if (!storageObject) {
-            const maybeBuffer = await storageProvider.get(videoKey)
-            if (maybeBuffer) {
-              storageObject = {
-                key: videoKey,
-                size: maybeBuffer.length,
-                lastModified: new Date(),
-              }
-            }
-          }
+          const storageObject = await this.waitForStorageObject(
+            storageProvider,
+            videoKey,
+            taskId,
+          )
           if (!storageObject) {
             throw new Error(`Storage object not found`)
           }
