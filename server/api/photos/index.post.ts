@@ -2,6 +2,7 @@ import path from 'path'
 import { useStorageProvider } from '~~/server/utils/useStorageProvider'
 import { eq } from 'drizzle-orm'
 import { generateSafePhotoId } from '~~/server/utils/file-utils'
+import { getServerTranslator } from '~~/server/utils/server-translator'
 
 const VIDEO_EXTENSIONS = new Set([
   '.mov',
@@ -44,7 +45,7 @@ export default eventHandler(async (event) => {
   await requireUserSession(event)
   const { storageProvider } = useStorageProvider(event)
   const config = useRuntimeConfig(event)
-  const t = await useTranslation(event)
+  const t = getServerTranslator(event)
 
   const body = await readBody(event)
   const { fileName, contentType, skipDuplicateCheck } = body

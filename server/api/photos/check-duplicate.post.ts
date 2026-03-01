@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { generateSafePhotoId } from '~~/server/utils/file-utils'
+import { getServerTranslator } from '~~/server/utils/server-translator'
 
 /**
  * 检查照片是否已存在
@@ -9,7 +10,7 @@ import { generateSafePhotoId } from '~~/server/utils/file-utils'
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
 
-  const t = await useTranslation(event)
+  const t = getServerTranslator(event)
 
   try {
     const { fileNames, storageKeys } = await readValidatedBody(

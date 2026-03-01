@@ -1,12 +1,13 @@
 import { useStorageProvider } from '~~/server/utils/useStorageProvider'
 import { logger } from '~~/server/utils/logger'
+import { getServerTranslator } from '~~/server/utils/server-translator'
 
 export default eventHandler(async (event) => {
   await requireUserSession(event)
 
   const { storageProvider } = useStorageProvider(event)
   const key = getQuery(event).key as string | undefined
-  const t = await useTranslation(event)
+  const t = getServerTranslator(event)
 
   if (!key) {
     throw createError({

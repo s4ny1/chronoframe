@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm'
 import { extractExifData } from '~~/server/services/image/exif'
 import { tables, useDB } from '~~/server/utils/db'
 import { useStorageProvider } from '~~/server/utils/useStorageProvider'
+import { getServerTranslator } from '~~/server/utils/server-translator'
 
 const paramsSchema = z.object({
   photoId: z.string().min(1),
@@ -47,7 +48,7 @@ const normalizeTags = (tags: string[] | undefined) => {
 export default eventHandler(async (event) => {
   await requireUserSession(event)
 
-  const t = await useTranslation(event)
+  const t = getServerTranslator(event)
   const { photoId } = paramsSchema.parse(event.context.params ?? {})
   const payload = bodySchema.parse(await readBody(event))
 
